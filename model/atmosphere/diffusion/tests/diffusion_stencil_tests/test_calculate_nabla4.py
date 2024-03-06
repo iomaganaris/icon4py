@@ -25,6 +25,7 @@ from icon4py.model.common.test_utils.helpers import (
 )
 from icon4py.model.common.type_alias import vpfloat, wpfloat
 
+import serialbox as ser
 
 def calculate_nabla4_numpy(
     grid,
@@ -95,6 +96,8 @@ class TestCalculateNabla4(StencilTest):
             inv_vert_vert_length,
             inv_primal_edge_length,
         )
+        serializer = ser.Serializer(ser.OpenModeKind.Write, ".", "nabla4_output")
+        serializer.write("z_nabla4_e2", ser.Savepoint("OutputValidationTest", {"time": 1}), z_nabla4_e2)
         return dict(z_nabla4_e2=z_nabla4_e2)
 
     @pytest.fixture
@@ -116,6 +119,18 @@ class TestCalculateNabla4(StencilTest):
         inv_primal_edge_length = random_field(grid, EdgeDim, dtype=wpfloat)
 
         z_nabla4_e2 = zero_field(grid, EdgeDim, KDim, dtype=vpfloat)
+
+        serializer = ser.Serializer(ser.OpenModeKind.Write, ".", "nabla4_fields")
+
+        serializer.write("u_vert", ser.Savepoint("ValidationTest", {"time": 1}), u_vert.ndarray)
+        serializer.write("v_vert", ser.Savepoint("ValidationTest", {"time": 1}), v_vert.ndarray)
+        serializer.write("primal_normal_vert_v1", ser.Savepoint("ValidationTest", {"time": 1}), primal_normal_vert_v1.ndarray)
+        serializer.write("primal_normal_vert_v2", ser.Savepoint("ValidationTest", {"time": 1}), primal_normal_vert_v2.ndarray)
+        serializer.write("primal_normal_vert_v1_new", ser.Savepoint("ValidationTest", {"time": 1}), primal_normal_vert_v1_new.ndarray)
+        serializer.write("primal_normal_vert_v2_new", ser.Savepoint("ValidationTest", {"time": 1}), primal_normal_vert_v2_new.ndarray)
+        serializer.write("z_nabla2_e", ser.Savepoint("ValidationTest", {"time": 1}), z_nabla2_e.ndarray)
+        serializer.write("inv_vert_vert_length", ser.Savepoint("ValidationTest", {"time": 1}), inv_vert_vert_length.ndarray)
+        serializer.write("inv_primal_edge_length", ser.Savepoint("ValidationTest", {"time": 1}), inv_primal_edge_length.ndarray)
 
         return dict(
             u_vert=u_vert,
