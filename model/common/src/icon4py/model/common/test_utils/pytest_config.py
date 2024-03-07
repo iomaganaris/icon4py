@@ -137,9 +137,28 @@ def pytest_generate_tests(metafunc):
 
         try:
             if selected_grid_type == "simple_grid":
-                from icon4py.model.common.grid.simple import SimpleGrid
+                from icon4py.model.common.grid.grid_manager import (  # type: ignore [import-not-found]
+                    GridManager,
+                    IndexTransformation,
+                    ToGt4PyTransformation
+                )
 
-                grid_instance = SimpleGrid()
+                from icon4py.model.common.grid.vertical import VerticalGridSize  # type: ignore [import-not-found]
+                SIMPLE_GRID_FILE = "/Users/ioannmag/cscs_repos/cycle20/icon-structured/tests/data/torus_grid/torus_100000_100000_24576.nc"
+                def init_grid_manager(fname, num_levels=65, transformation=ToGt4PyTransformation()):
+                    grid_manager = GridManager(transformation, fname, VerticalGridSize(num_levels))
+                    grid_manager()
+                    return grid_manager
+
+                def get_simple_grid():
+                    grid_manager = init_grid_manager(SIMPLE_GRID_FILE)
+                    grid_manager()
+                    simple_grid = grid_manager.get_grid()
+                    return simple_grid
+                grid_instance = get_simple_grid()
+                # from icon4py.model.common.grid.simple import SimpleGrid
+
+                # grid_instance = SimpleGrid()
             elif selected_grid_type == "icon_grid":
                 from icon4py.model.common.test_utils.grid_utils import (
                     get_icon_grid_from_gridfile,

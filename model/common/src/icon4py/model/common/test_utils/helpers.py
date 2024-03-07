@@ -192,27 +192,32 @@ def _test_validation(self, grid, backend, input_data):
         assert np.allclose(
             input_data[name].asnumpy()[gtslice], reference_outputs[name][refslice], equal_nan=True
         ), f"Validation failed for '{name}'"
+        import serialbox as ser
+        serializer = ser.Serializer(ser.OpenModeKind.Write, ".", "nabla4_output")
+        serializer.write("z_nabla4_e2", ser.Savepoint("OutputValidationTest", {"time": 1}), reference_outputs[name][refslice])
+        print("==== GT reference ====")
+        print(reference_outputs[name][refslice])
 
 
-if pytest_benchmark:
+# if pytest_benchmark:
 
-    def _test_execution_benchmark(self, pytestconfig, grid, backend, input_data, benchmark):
-        if pytestconfig.getoption(
-            "--benchmark-disable"
-        ):  # skipping as otherwise program calls are duplicated in tests.
-            pytest.skip("Test skipped due to 'benchmark-disable' option.")
-        else:
-            input_data = allocate_data(backend, input_data)
-            benchmark(
-                self.PROGRAM.with_backend(backend),
-                **input_data,
-                offset_provider=grid.offset_providers,
-            )
+#     def _test_execution_benchmark(self, pytestconfig, grid, backend, input_data, benchmark):
+#         if pytestconfig.getoption(
+#             "--benchmark-disable"
+#         ):  # skipping as otherwise program calls are duplicated in tests.
+#             pytest.skip("Test skipped due to 'benchmark-disable' option.")
+#         else:
+#             input_data = allocate_data(backend, input_data)
+#             benchmark(
+#                 self.PROGRAM.with_backend(backend),
+#                 **input_data,
+#                 offset_provider=grid.offset_providers,
+#             )
 
-else:
+# else:
 
-    def _test_execution_benchmark(self, pytestconfig):
-        pytest.skip("Test skipped as `pytest-benchmark` is not installed.")
+def _test_execution_benchmark(self, pytestconfig):
+    pytest.skip("Test skipped as `pytest-benchmark` is not installed.")
 
 
 class StencilTest:
