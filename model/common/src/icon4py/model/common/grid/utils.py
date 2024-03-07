@@ -19,7 +19,6 @@ def neighbortable_offset_provider_for_1d_sparse_fields(
     old_shape: tuple[int, int],
     origin_axis: Dimension,
     neighbor_axis: Dimension,
-    on_gpu: bool,
     has_skip_values: bool,
 ):
     if on_gpu:
