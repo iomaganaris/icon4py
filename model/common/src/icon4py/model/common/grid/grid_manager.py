@@ -233,10 +233,12 @@ class GridManager:
         transformation: IndexTransformation,
         grid_file: str,
         config: VerticalGridSize,
+        apply_torus_permutation: bool = False
     ):
         self._log = logging.getLogger(__name__)
         self._transformation = transformation
         self._config = config
+        self._apply_torus_permutation = apply_torus_permutation
         self._grid: Optional[IconGrid] = None
         self._file_name = grid_file
 
@@ -369,7 +371,7 @@ class GridManager:
         c2v = self._get_index_field(reader, GridFile.OffsetName.C2V)
         e2v = self._get_index_field(reader, GridFile.OffsetName.E2V)
 
-        e2c2v = self._construct_diamond_vertices(e2v, c2v, e2c)
+        e2c2v = self._construct_diamond_vertices(e2v, c2v, e2c, self._apply_torus_permutation)
         e2c2e = self._construct_diamond_edges(e2c, c2e)
         e2c2e0 = np.column_stack((e2c2e, np.asarray(range(e2c2e.shape[0]))))
 
@@ -423,7 +425,7 @@ class GridManager:
 
     @staticmethod
     def _construct_diamond_vertices(
-        e2v: np.ndarray, c2v: np.ndarray, e2c: np.ndarray
+        e2v: np.ndarray, c2v: np.ndarray, e2c: np.ndarray, apply_torus_permutation: bool
     ) -> np.ndarray:
         r"""
         Construct the connectivity table for the vertices of a diamond in the ICON triangular grid.
@@ -451,6 +453,30 @@ class GridManager:
 
         Returns: np.ndarray containing the connectivity table for edge-to-vertex on the diamond
         """
+        if apply_torus_permutation:
+            def get_permutation_vector(e2v_table):
+                permutation = []
+                for i in range(2, len(e2v_table), 3):
+                    permutation.append((e2v_table[i], i))
+                permutation.sort(key=lambda x: x[0][0])
+                permutation_indexes = []
+                j = 0
+                for i in range(len(e2v_table)):
+                    if i % 3 != 2:
+                        permutation_indexes.append(i)
+                    else:
+                        permutation_indexes.append(permutation[j][1])
+                        j += 1
+                return permutation_indexes
+            def apply_permutation(vec, permutation):
+                ret = []
+                for i, _ in enumerate(vec):
+                    ret.append(vec[permutation[i]])
+                return ret
+            torus_permutation = get_permutation_vector(e2v)
+            apply_permutation(e2v, torus_permutation)
+            apply_permutation(e2c, torus_permutation)
+
         dummy_c2v = _patch_with_dummy_lastline(c2v)
         expanded = dummy_c2v[e2c[:, :], :]
         sh = expanded.shape
@@ -459,7 +485,13 @@ class GridManager:
         # TODO (magdalena) vectorize speed this up?
         for i in range(sh[0]):
             far_indices[i, :] = flat[i, ~np.in1d(flat[i, :], e2v[i, :])][:2]
-        return np.hstack((e2v, far_indices))
+
+        if apply_torus_permutation:
+            e2c2v = np.hstack((e2v, far_indices))
+            return np.array(apply_permutation(e2c2v, torus_permutation))
+        else:
+            return np.hstack((e2v, far_indices))
+
 
     @staticmethod
     def _construct_diamond_edges(e2c: np.ndarray, c2e: np.ndarray) -> np.ndarray:
