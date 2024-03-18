@@ -146,7 +146,7 @@ def pytest_generate_tests(metafunc):
                 from icon4py.model.common.grid.vertical import VerticalGridSize  # type: ignore [import-not-found]
                 SIMPLE_GRID_FILE = "/Users/ioannmag/cscs_repos/cycle20/icon-structured/tests/data/torus_grid/torus_100000_100000_24576.nc"
                 def init_grid_manager(fname, num_levels=65, transformation=ToGt4PyTransformation()):
-                    grid_manager = GridManager(transformation, fname, VerticalGridSize(num_levels))
+                    grid_manager = GridManager(transformation, fname, VerticalGridSize(num_levels), apply_torus_permutation=True)
                     grid_manager()
                     return grid_manager
 

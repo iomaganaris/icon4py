@@ -467,7 +467,14 @@ class GridManager:
                     else:
                         permutation_indexes.append(permutation[j][1])
                         j += 1
-                return permutation_indexes
+                permutation_indexes_per_orientation = []
+                for i in range(0, len(e2v_table), 3):
+                    permutation_indexes_per_orientation.append(permutation_indexes[i])
+                for i in range(1, len(e2v_table), 3):
+                    permutation_indexes_per_orientation.append(permutation_indexes[i])
+                for i in range(2, len(e2v_table), 3):
+                    permutation_indexes_per_orientation.append(permutation_indexes[i])
+                return permutation_indexes_per_orientation
             def apply_permutation(vec, permutation):
                 ret = []
                 for i, _ in enumerate(vec):
