@@ -233,12 +233,14 @@ class GridManager:
         transformation: IndexTransformation,
         grid_file: str,
         config: VerticalGridSize,
-        apply_torus_permutation: bool = False
+        apply_torus_permutation: bool = False,
+        group_edges_with_same_orientation: bool = False
     ):
         self._log = logging.getLogger(__name__)
         self._transformation = transformation
         self._config = config
         self._apply_torus_permutation = apply_torus_permutation
+        self._group_edges_with_same_orientation = group_edges_with_same_orientation
         self._grid: Optional[IconGrid] = None
         self._file_name = grid_file
 
@@ -371,7 +373,7 @@ class GridManager:
         c2v = self._get_index_field(reader, GridFile.OffsetName.C2V)
         e2v = self._get_index_field(reader, GridFile.OffsetName.E2V)
 
-        e2c2v = self._construct_diamond_vertices(e2v, c2v, e2c, self._apply_torus_permutation)
+        e2c2v = self._construct_diamond_vertices(e2v, c2v, e2c, self._apply_torus_permutation, self._group_edges_with_same_orientation)
         e2c2e = self._construct_diamond_edges(e2c, c2e)
         e2c2e0 = np.column_stack((e2c2e, np.asarray(range(e2c2e.shape[0]))))
 
@@ -425,7 +427,7 @@ class GridManager:
 
     @staticmethod
     def _construct_diamond_vertices(
-        e2v: np.ndarray, c2v: np.ndarray, e2c: np.ndarray, apply_torus_permutation: bool
+        e2v: np.ndarray, c2v: np.ndarray, e2c: np.ndarray, apply_torus_permutation: bool, group_edges_with_same_orientation: bool
     ) -> np.ndarray:
         r"""
         Construct the connectivity table for the vertices of a diamond in the ICON triangular grid.
@@ -473,9 +475,15 @@ class GridManager:
                 for i, _ in enumerate(vec):
                     ret.append(vec[permutation[i]])
                 return ret
-            torus_permutation = get_permutation_vector(e2v)
-            apply_permutation(e2v, torus_permutation)
-            apply_permutation(e2c, torus_permutation)
+            def get_permutation_vector_for_orientation_ordering(e2v_table):
+                permutation = []
+                for i in range(0, len(e2v_table), 3):
+                    permutation.append(i)
+                for i in range(1, len(e2v_table), 3):
+                    permutation.append(i)
+                for i in range(2, len(e2v_table), 3):
+                    permutation.append(i)
+                return permutation
 
         dummy_c2v = _patch_with_dummy_lastline(c2v)
         expanded = dummy_c2v[e2c[:, :], :]
@@ -488,7 +496,13 @@ class GridManager:
 
         if apply_torus_permutation:
             e2c2v = np.hstack((e2v, far_indices))
-            return np.array(apply_permutation(e2c2v, torus_permutation))
+            torus_permutation = get_permutation_vector(e2v)
+            if group_edges_with_same_orientation:
+                print("[GridManager] Grouping edges with same orientation")
+                return np.array(apply_permutation(apply_permutation(e2c2v, torus_permutation), get_permutation_vector_for_orientation_ordering(e2v)))
+            else:
+                print("[GridManager] Grouping edges with same parent vertex")
+                return np.array(apply_permutation(e2c2v, torus_permutation))
         else:
             return np.hstack((e2v, far_indices))
 
