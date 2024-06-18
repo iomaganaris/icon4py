@@ -39,22 +39,6 @@ def profile_disable():
     stats.dump_stats(f"{__name__}.profile")
 
 
-# global profiler object
-profiler = cProfile.Profile()
-
-grid = SimpleGrid()
-
-
-def profile_enable():
-    profiler.enable()
-
-
-def profile_disable():
-    profiler.disable()
-    stats = pstats.Stats(profiler)
-    stats.dump_stats(f"{__name__}.profile")
-
-
 @field_operator
 def _square(
     inp: Field[[CellDim, KDim], float64],

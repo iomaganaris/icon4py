@@ -248,10 +248,7 @@ import numpy as np
 import cupy as cp
 from numpy.typing import NDArray
 from gt4py.next.iterator.embedded import np_as_located_field
-<<<<<<< HEAD
-=======
 from gt4py.next.ffront.fbuiltins import int32
->>>>>>> upstream/main
 from icon4py.model.common.settings import xp
 
 # logger setup
