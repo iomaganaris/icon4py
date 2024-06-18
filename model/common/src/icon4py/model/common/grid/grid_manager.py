@@ -455,6 +455,8 @@ class GridManager:
 
         Returns: np.ndarray containing the connectivity table for edge-to-vertex on the diamond
         """
+        # print("original e2v")
+        # print(e2v)
         if apply_torus_permutation:
             def get_permutation_vector(e2v_table):
                 permutation = []

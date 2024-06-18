@@ -192,11 +192,11 @@ def _test_validation(self, grid, backend, input_data):
         assert np.allclose(
             input_data[name].asnumpy()[gtslice], reference_outputs[name][refslice], equal_nan=True
         ), f"Validation failed for '{name}'"
-        import serialbox as ser
-        serializer = ser.Serializer(ser.OpenModeKind.Write, ".", "nabla4_output")
-        serializer.write("z_nabla4_e2", ser.Savepoint("OutputValidationTest", {"time": 1}), reference_outputs[name][refslice])
-        print("==== GT reference ====")
-        print(reference_outputs[name][refslice])
+        # import serialbox as ser
+        # serializer = ser.Serializer(ser.OpenModeKind.Write, ".", "nabla4_output")
+        # serializer.write("z_nabla4_e2", ser.Savepoint("OutputValidationTest", {"time": 1}), reference_outputs[name][refslice])
+        # print("==== GT reference ====")
+        # print(reference_outputs[name][refslice])
 
 
 # if pytest_benchmark:

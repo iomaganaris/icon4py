@@ -22,6 +22,7 @@ from icon4py.model.common.interpolation.stencils.mo_intp_rbf_rbf_vec_interpol_ve
 from icon4py.model.common.test_utils.helpers import StencilTest, random_field, zero_field
 from icon4py.model.common.type_alias import wpfloat
 
+import serialbox as ser
 
 class TestMoIntpRbfRbfVecInterpolVertex(StencilTest):
     PROGRAM = mo_intp_rbf_rbf_vec_interpol_vertex
@@ -32,12 +33,15 @@ class TestMoIntpRbfRbfVecInterpolVertex(StencilTest):
         grid, p_e_in: np.array, ptr_coeff_1: np.array, ptr_coeff_2: np.array, **kwargs
     ) -> tuple[np.array]:
         v2e = grid.connectivities[V2EDim]
+        # import pdb; pdb.set_trace()
         ptr_coeff_1 = np.expand_dims(ptr_coeff_1, axis=-1)
         p_u_out = np.sum(p_e_in[v2e] * ptr_coeff_1, axis=1)
 
         ptr_coeff_2 = np.expand_dims(ptr_coeff_2, axis=-1)
         p_v_out = np.sum(p_e_in[v2e] * ptr_coeff_2, axis=1)
-
+        # serializer = ser.Serializer(ser.OpenModeKind.Write, ".", "MoIntpRbfRbfVecInterpolVertex_output")
+        # serializer.write("p_u_out", ser.Savepoint("OutputValidationTest", {"time": 1}), p_u_out)
+        # serializer.write("p_v_out", ser.Savepoint("OutputValidationTest", {"time": 1}), p_v_out)
         return dict(p_v_out=p_v_out, p_u_out=p_u_out)
 
     @pytest.fixture
@@ -47,6 +51,11 @@ class TestMoIntpRbfRbfVecInterpolVertex(StencilTest):
         ptr_coeff_2 = random_field(grid, VertexDim, V2EDim, dtype=wpfloat)
         p_v_out = zero_field(grid, VertexDim, KDim, dtype=wpfloat)
         p_u_out = zero_field(grid, VertexDim, KDim, dtype=wpfloat)
+
+        # serializer = ser.Serializer(ser.OpenModeKind.Write, ".", "MoIntpRbfRbfVecInterpolVertex_fields")
+        # serializer.write("p_e_in", ser.Savepoint("ValidationTest", {"time": 1}), p_e_in.ndarray)
+        # serializer.write("ptr_coeff_1", ser.Savepoint("ValidationTest", {"time": 1}), ptr_coeff_1.ndarray)
+        # serializer.write("ptr_coeff_2", ser.Savepoint("ValidationTest", {"time": 1}), ptr_coeff_2.ndarray)
 
         return dict(
             p_e_in=p_e_in,
