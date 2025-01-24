@@ -619,7 +619,7 @@ class GridManager:
         grid.with_connectivities(
             {o.target[1]: xp.asarray(c) for o, c in global_connectivities.items()}
         )
-        _add_derived_connectivities(grid, array_ns=xp, apply_torus_permutation=self._apply_torus_permutation, roup_edges_with_same_orientation=self._group_edges_with_same_orientation)
+        _add_derived_connectivities(grid, array_ns=xp, apply_torus_permutation=self._apply_torus_permutation, group_edges_with_same_orientation=self._group_edges_with_same_orientation)
         _update_size_for_1d_sparse_dims(grid)
         start, end, _ = self._read_start_end_indices()
         for dim in dims.global_dimensions.values():
