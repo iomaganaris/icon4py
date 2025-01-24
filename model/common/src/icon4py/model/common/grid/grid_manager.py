@@ -364,7 +364,7 @@ class GridManager:
     def __init__(
         self,
         transformation: IndexTransformation,
-       grid_file: Union[pathlib.Path, str],
+        grid_file: Union[pathlib.Path, str],
         config: v_grid.VerticalGridConfig,  # TODO (@halungge) remove to separate vertical and horizontal grid
         apply_torus_permutation: bool = False,
         group_edges_with_same_orientation: bool = False
@@ -619,7 +619,7 @@ class GridManager:
         grid.with_connectivities(
             {o.target[1]: xp.asarray(c) for o, c in global_connectivities.items()}
         )
-        _add_derived_connectivities(grid, array_ns=xp, self._apply_torus_permutation, self._group_edges_with_same_orientation)
+        _add_derived_connectivities(grid, array_ns=xp, apply_torus_permutation=self._apply_torus_permutation, roup_edges_with_same_orientation=self._group_edges_with_same_orientation)
         _update_size_for_1d_sparse_dims(grid)
         start, end, _ = self._read_start_end_indices()
         for dim in dims.global_dimensions.values():
@@ -674,8 +674,8 @@ def _add_derived_connectivities(grid: icon.IconGrid, array_ns: ModuleType = np, 
         grid.connectivities[dims.C2VDim],
         grid.connectivities[dims.E2CDim],
         array_ns=array_ns,
-        apply_torus_permutation,
-        group_edges_with_same_orientation,
+        apply_torus_permutation=apply_torus_permutation,
+        group_edges_with_same_orientation=group_edges_with_same_orientation,
     )
     e2c2e = _construct_diamond_edges(
         grid.connectivities[dims.E2CDim], grid.connectivities[dims.C2EDim], array_ns=array_ns
@@ -782,26 +782,26 @@ def _construct_diamond_vertices(
                     permutation.append(i)
                 return permutation
 
-        dummy_c2v = _patch_with_dummy_lastline(c2v)
-        expanded = dummy_c2v[e2c[:, :], :]
-        sh = expanded.shape
-        flat = expanded.reshape(sh[0], sh[1] * sh[2])
-        far_indices = array_ns.zeros_like(e2v)
-        # TODO (magdalena) vectorize speed this up?
-        for i in range(sh[0]):
-            far_indices[i, :] = flat[i, ~array_ns.in1d(flat[i, :], e2v[i, :])][:2]
+    dummy_c2v = _patch_with_dummy_lastline(c2v)
+    expanded = dummy_c2v[e2c[:, :], :]
+    sh = expanded.shape
+    flat = expanded.reshape(sh[0], sh[1] * sh[2])
+    far_indices = array_ns.zeros_like(e2v)
+    # TODO (magdalena) vectorize speed this up?
+    for i in range(sh[0]):
+        far_indices[i, :] = flat[i, ~array_ns.in1d(flat[i, :], e2v[i, :])][:2]
 
-        if apply_torus_permutation:
-            e2c2v = array_ns.hstack((e2v, far_indices))
-            torus_permutation = get_permutation_vector(e2v)
-            if group_edges_with_same_orientation:
-                print("[GridManager] Grouping edges with same orientation")
-                return array_ns.array(apply_permutation(apply_permutation(e2c2v, torus_permutation), get_permutation_vector_for_orientation_ordering(e2v)))
-            else:
-                print("[GridManager] Grouping edges with same parent vertex")
-                return array_ns.array(apply_permutation(e2c2v, torus_permutation))
+    if apply_torus_permutation:
+        e2c2v = array_ns.hstack((e2v, far_indices))
+        torus_permutation = get_permutation_vector(e2v)
+        if group_edges_with_same_orientation:
+            print("[GridManager] Grouping edges with same orientation")
+            return array_ns.array(apply_permutation(apply_permutation(e2c2v, torus_permutation), get_permutation_vector_for_orientation_ordering(e2v)))
         else:
-            return array_ns.hstack((e2v, far_indices))
+            print("[GridManager] Grouping edges with same parent vertex")
+            return array_ns.array(apply_permutation(e2c2v, torus_permutation))
+    else:
+        return array_ns.hstack((e2v, far_indices))
 
 
 def _construct_diamond_edges(
