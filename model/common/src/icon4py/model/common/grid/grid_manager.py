@@ -619,7 +619,7 @@ class GridManager:
         grid.with_connectivities(
             {o.target[1]: xp.asarray(c) for o, c in global_connectivities.items()}
         )
-        _add_derived_connectivities(grid, array_ns=xp)
+        _add_derived_connectivities(grid, array_ns=xp, self._apply_torus_permutation, self._group_edges_with_same_orientation)
         _update_size_for_1d_sparse_dims(grid)
         start, end, _ = self._read_start_end_indices()
         for dim in dims.global_dimensions.values():
@@ -658,33 +658,7 @@ class GridManager:
         grid_size = base.HorizontalGridSize(
             num_vertices=num_vertices, num_edges=num_edges, num_cells=num_cells
         )
-<<<<<<< HEAD
-        c2e = self._get_index_field(reader, GridFile.OffsetName.C2E)
-
-        e2c = self._get_index_field(reader, GridFile.OffsetName.E2C)
-        c2v = self._get_index_field(reader, GridFile.OffsetName.C2V)
-        e2v = self._get_index_field(reader, GridFile.OffsetName.E2V)
-
-        e2c2v = self._construct_diamond_vertices(e2v, c2v, e2c, self._apply_torus_permutation, self._group_edges_with_same_orientation)
-        e2c2e = self._construct_diamond_edges(e2c, c2e)
-        e2c2e0 = np.column_stack((np.asarray(range(e2c2e.shape[0])), e2c2e))
-
-        v2c = self._get_index_field(reader, GridFile.OffsetName.V2C)
-        v2e = self._get_index_field(reader, GridFile.OffsetName.V2E)
-        v2e2v = self._get_index_field(reader, GridFile.OffsetName.V2E2V)
-        c2e2c = self._get_index_field(reader, GridFile.OffsetName.C2E2C)
-        c2e2c0 = np.column_stack((np.asarray(range(c2e2c.shape[0])), c2e2c))
-        (
-            start_indices,
-            end_indices,
-            refine_ctrl,
-            refine_ctrl_max,
-        ) = self._read_grid_refinement_information(dataset)
-
-        config = GridConfig(
-=======
         config = base.GridConfig(
->>>>>>> upstream/main
             horizontal_config=grid_size,
             vertical_size=self._vertical_config.num_levels,
             on_gpu=on_gpu,
@@ -694,12 +668,14 @@ class GridManager:
         return grid
 
 
-def _add_derived_connectivities(grid: icon.IconGrid, array_ns: ModuleType = np) -> icon.IconGrid:
+def _add_derived_connectivities(grid: icon.IconGrid, array_ns: ModuleType = np, apply_torus_permutation = False, group_edges_with_same_orientation = False) -> icon.IconGrid:
     e2c2v = _construct_diamond_vertices(
         grid.connectivities[dims.E2VDim],
         grid.connectivities[dims.C2VDim],
         grid.connectivities[dims.E2CDim],
         array_ns=array_ns,
+        apply_torus_permutation,
+        group_edges_with_same_orientation,
     )
     e2c2e = _construct_diamond_edges(
         grid.connectivities[dims.E2CDim], grid.connectivities[dims.C2EDim], array_ns=array_ns
@@ -728,38 +704,55 @@ def _add_derived_connectivities(grid: icon.IconGrid, array_ns: ModuleType = np) 
         }
     )
 
-<<<<<<< HEAD
-    @staticmethod
-    def _construct_diamond_vertices(
-        e2v: np.ndarray, c2v: np.ndarray, e2c: np.ndarray, apply_torus_permutation: bool, group_edges_with_same_orientation: bool
-    ) -> np.ndarray:
-        r"""
-        Construct the connectivity table for the vertices of a diamond in the ICON triangular grid.
+    return grid
 
-        Starting from the e2v and c2v connectivity the connectivity table for e2c2v is built up.
 
-                     v0
-                    / \
-                  /    \
-                 /      \
-                /        \
-               v1---e0---v3
-                \       /
-                 \     /
-                  \   /
-                   \ /
-                    v2
-        For example for this diamond: e0 -> (v0, v1, v2, v3)
-        Ordering is the same as ICON uses.
+def _update_size_for_1d_sparse_dims(grid):
+    grid.update_size_connectivities(
+        {
+            dims.ECVDim: grid.size[dims.EdgeDim] * grid.size[dims.E2C2VDim],
+            dims.CEDim: grid.size[dims.CellDim] * grid.size[dims.C2EDim],
+            dims.ECDim: grid.size[dims.EdgeDim] * grid.size[dims.E2CDim],
+        }
+    )
 
-        Args:
-            e2v: np.ndarray containing the connectivity table for edge-to-vertex
-            c2v: np.ndarray containing the connectivity table for cell-to-vertex
-            e2c: np.ndarray containing the connectivity table for edge-to-cell
 
-        Returns: np.ndarray containing the connectivity table for edge-to-vertex on the diamond
-        """
-        if apply_torus_permutation:
+def _construct_diamond_vertices(
+    e2v: data_alloc.NDArray,
+    c2v: data_alloc.NDArray,
+    e2c: data_alloc.NDArray,
+    array_ns: ModuleType = np,
+    apply_torus_permutation: bool = False,
+    group_edges_with_same_orientation: bool = False
+) -> data_alloc.NDArray:
+    r"""
+    Construct the connectivity table for the vertices of a diamond in the ICON triangular grid.
+
+    Starting from the e2v and c2v connectivity the connectivity table for e2c2v is built up.
+
+             v0
+            /  \
+           /    \
+          /      \
+         /        \
+        v1---e0---v3
+         \        /
+          \      /
+           \    /
+            \  /
+             v2
+
+    For example for this diamond: e0 -> (v0, v1, v2, v3)
+    Ordering is the same as ICON uses.
+
+    Args:
+        e2v: ndarray containing the connectivity table for edge-to-vertex
+        c2v: ndarray containing the connectivity table for cell-to-vertex
+        e2c: ndarray containing the connectivity table for edge-to-cell
+
+    Returns: ndarray containing the connectivity table for edge-to-vertex on the diamond
+    """
+    if apply_torus_permutation:
             def get_permutation_vector(e2v_table):
                 permutation = []
                 for i in range(2, len(e2v_table), 3):
@@ -793,99 +786,22 @@ def _add_derived_connectivities(grid: icon.IconGrid, array_ns: ModuleType = np) 
         expanded = dummy_c2v[e2c[:, :], :]
         sh = expanded.shape
         flat = expanded.reshape(sh[0], sh[1] * sh[2])
-        far_indices = np.zeros_like(e2v)
+        far_indices = array_ns.zeros_like(e2v)
         # TODO (magdalena) vectorize speed this up?
         for i in range(sh[0]):
-            far_indices[i, :] = flat[i, ~np.in1d(flat[i, :], e2v[i, :])][:2]
+            far_indices[i, :] = flat[i, ~array_ns.in1d(flat[i, :], e2v[i, :])][:2]
 
         if apply_torus_permutation:
-            e2c2v = np.hstack((e2v, far_indices))
+            e2c2v = array_ns.hstack((e2v, far_indices))
             torus_permutation = get_permutation_vector(e2v)
             if group_edges_with_same_orientation:
                 print("[GridManager] Grouping edges with same orientation")
-                return np.array(apply_permutation(apply_permutation(e2c2v, torus_permutation), get_permutation_vector_for_orientation_ordering(e2v)))
+                return array_ns.array(apply_permutation(apply_permutation(e2c2v, torus_permutation), get_permutation_vector_for_orientation_ordering(e2v)))
             else:
                 print("[GridManager] Grouping edges with same parent vertex")
-                return np.array(apply_permutation(e2c2v, torus_permutation))
+                return array_ns.array(apply_permutation(e2c2v, torus_permutation))
         else:
-            return np.hstack((e2v, far_indices))
-
-
-    @staticmethod
-    def _construct_diamond_edges(e2c: np.ndarray, c2e: np.ndarray) -> np.ndarray:
-        r"""
-        Construct the connectivity table for the edges of a diamond in the ICON triangular grid.
-
-        Starting from the e2c and c2e connectivity the connectivity table for e2c2e is built up.
-
-            / \
-          /    \
-         e2    e1
-        /    c0  \
-        ----e0----
-        \   c1   /
-         e3    e4
-          \   /
-           \ /
-
-        For example, for this diamond for e0 -> (e1, e2, e3, e4)
-=======
-    return grid
->>>>>>> upstream/main
-
-
-def _update_size_for_1d_sparse_dims(grid):
-    grid.update_size_connectivities(
-        {
-            dims.ECVDim: grid.size[dims.EdgeDim] * grid.size[dims.E2C2VDim],
-            dims.CEDim: grid.size[dims.CellDim] * grid.size[dims.C2EDim],
-            dims.ECDim: grid.size[dims.EdgeDim] * grid.size[dims.E2CDim],
-        }
-    )
-
-
-def _construct_diamond_vertices(
-    e2v: data_alloc.NDArray,
-    c2v: data_alloc.NDArray,
-    e2c: data_alloc.NDArray,
-    array_ns: ModuleType = np,
-) -> data_alloc.NDArray:
-    r"""
-    Construct the connectivity table for the vertices of a diamond in the ICON triangular grid.
-
-    Starting from the e2v and c2v connectivity the connectivity table for e2c2v is built up.
-
-             v0
-            /  \
-           /    \
-          /      \
-         /        \
-        v1---e0---v3
-         \        /
-          \      /
-           \    /
-            \  /
-             v2
-
-    For example for this diamond: e0 -> (v0, v1, v2, v3)
-    Ordering is the same as ICON uses.
-
-    Args:
-        e2v: ndarray containing the connectivity table for edge-to-vertex
-        c2v: ndarray containing the connectivity table for cell-to-vertex
-        e2c: ndarray containing the connectivity table for edge-to-cell
-
-    Returns: ndarray containing the connectivity table for edge-to-vertex on the diamond
-    """
-    dummy_c2v = _patch_with_dummy_lastline(c2v, array_ns=array_ns)
-    expanded = dummy_c2v[e2c, :]
-    sh = expanded.shape
-    flat = expanded.reshape(sh[0], sh[1] * sh[2])
-    far_indices = array_ns.zeros_like(e2v)
-    # TODO (magdalena) vectorize speed this up?
-    for i in range(sh[0]):
-        far_indices[i, :] = flat[i, ~array_ns.isin(flat[i, :], e2v[i, :])][:2]
-    return array_ns.hstack((e2v, far_indices))
+            return array_ns.hstack((e2v, far_indices))
 
 
 def _construct_diamond_edges(
