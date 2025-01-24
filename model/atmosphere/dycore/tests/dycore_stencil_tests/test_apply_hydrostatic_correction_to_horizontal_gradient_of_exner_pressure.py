@@ -1,26 +1,21 @@
 # ICON4Py - ICON inspired code in Python and GT4Py
 #
-# Copyright (c) 2022, ETH Zurich and MeteoSwiss
+# Copyright (c) 2022-2024, ETH Zurich and MeteoSwiss
 # All rights reserved.
 #
-# This file is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the
-# Free Software Foundation, either version 3 of the License, or any later
-# version. See the LICENSE.txt file at the top-level directory of this
-# distribution for a copy of the license or check <https://www.gnu.org/licenses/>.
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+import gt4py.next as gtx
 import numpy as np
 import pytest
-from gt4py.next.ffront.fbuiltins import int32
 
-from icon4py.model.atmosphere.dycore.apply_hydrostatic_correction_to_horizontal_gradient_of_exner_pressure import (
+from icon4py.model.atmosphere.dycore.stencils.apply_hydrostatic_correction_to_horizontal_gradient_of_exner_pressure import (
     apply_hydrostatic_correction_to_horizontal_gradient_of_exner_pressure,
 )
-from icon4py.model.common.dimension import EdgeDim, KDim
-from icon4py.model.common.test_utils.helpers import StencilTest, random_field, random_mask
+from icon4py.model.common import dimension as dims
 from icon4py.model.common.type_alias import vpfloat
+from icon4py.model.common.utils.data_allocation import random_field, random_mask
+from icon4py.model.testing.helpers import StencilTest
 
 
 class TestApplyHydrostaticCorrectionToHorizontalGradientOfExnerPressure(StencilTest):
@@ -44,18 +39,18 @@ class TestApplyHydrostaticCorrectionToHorizontalGradientOfExnerPressure(StencilT
 
     @pytest.fixture
     def input_data(self, grid):
-        ipeidx_dsl = random_mask(grid, EdgeDim, KDim)
-        pg_exdist = random_field(grid, EdgeDim, KDim, dtype=vpfloat)
-        z_hydro_corr = random_field(grid, EdgeDim, dtype=vpfloat)
-        z_gradh_exner = random_field(grid, EdgeDim, KDim, dtype=vpfloat)
+        ipeidx_dsl = random_mask(grid, dims.EdgeDim, dims.KDim)
+        pg_exdist = random_field(grid, dims.EdgeDim, dims.KDim, dtype=vpfloat)
+        z_hydro_corr = random_field(grid, dims.EdgeDim, dtype=vpfloat)
+        z_gradh_exner = random_field(grid, dims.EdgeDim, dims.KDim, dtype=vpfloat)
 
         return dict(
             ipeidx_dsl=ipeidx_dsl,
             pg_exdist=pg_exdist,
             z_hydro_corr=z_hydro_corr,
             z_gradh_exner=z_gradh_exner,
-            horizontal_start=int32(0),
-            horizontal_end=int32(grid.num_edges),
-            vertical_start=int32(0),
-            vertical_end=int32(grid.num_levels),
+            horizontal_start=0,
+            horizontal_end=gtx.int32(grid.num_edges),
+            vertical_start=0,
+            vertical_end=gtx.int32(grid.num_levels),
         )

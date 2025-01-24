@@ -1,31 +1,22 @@
 # ICON4Py - ICON inspired code in Python and GT4Py
 #
-# Copyright (c) 2022, ETH Zurich and MeteoSwiss
+# Copyright (c) 2022-2024, ETH Zurich and MeteoSwiss
 # All rights reserved.
 #
-# This file is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the
-# Free Software Foundation, either version 3 of the License, or any later
-# version. See the LICENSE.txt file at the top-level directory of this
-# distribution for a copy of the license or check <https://www.gnu.org/licenses/>.
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
 
+import gt4py.next as gtx
 import numpy as np
 import pytest
-from gt4py.next.ffront.fbuiltins import int32
 
-from icon4py.model.atmosphere.dycore.fused_velocity_advection_stencil_8_to_13 import (
+from icon4py.model.atmosphere.dycore.stencils.fused_velocity_advection_stencil_8_to_13 import (
     fused_velocity_advection_stencil_8_to_13,
 )
-from icon4py.model.atmosphere.dycore.state_utils.utils import indices_field
-from icon4py.model.common.dimension import C2EDim, CEDim, CellDim, EdgeDim, KDim
-from icon4py.model.common.test_utils.helpers import (
-    StencilTest,
-    as_1D_sparse_field,
-    random_field,
-    zero_field,
-)
+from icon4py.model.common import dimension as dims
+from icon4py.model.common.utils import data_allocation as data_alloc
+from icon4py.model.common.utils.data_allocation import random_field, zero_field
+from icon4py.model.testing.helpers import StencilTest
 
 from .test_copy_cell_kdim_field_to_vp import copy_cell_kdim_field_to_vp_numpy
 from .test_correct_contravariant_vertical_velocity import (
@@ -46,7 +37,7 @@ class TestFusedVelocityAdvectionStencil8To13(StencilTest):
 
     @staticmethod
     def reference(
-        grid,
+        connectivities: dict[gtx.Dimension, np.ndarray],
         z_kin_hor_e,
         e_bln_c_s,
         z_w_concorr_me,
@@ -66,20 +57,18 @@ class TestFusedVelocityAdvectionStencil8To13(StencilTest):
 
         z_ekinh = np.where(
             k_nlev < nlev,
-            interpolate_to_cell_center_numpy(grid, z_kin_hor_e, e_bln_c_s),
+            interpolate_to_cell_center_numpy(connectivities, z_kin_hor_e, e_bln_c_s),
             z_ekinh,
         )
 
         if istep == 1:
-            z_w_concorr_mc = np.where(
-                (nflatlev <= k_nlev) & (k_nlev < nlev),
-                interpolate_to_cell_center_numpy(grid, z_w_concorr_me, e_bln_c_s),
-                z_w_concorr_mc,
+            z_w_concorr_mc = interpolate_to_cell_center_numpy(
+                connectivities, z_w_concorr_me, e_bln_c_s
             )
 
             w_concorr_c = np.where(
                 (nflatlev + 1 <= k_nlev) & (k_nlev < nlev),
-                interpolate_to_half_levels_vp_numpy(grid, z_w_concorr_mc, wgtfac_c),
+                interpolate_to_half_levels_vp_numpy(wgtfac_c=wgtfac_c, interpolant=z_w_concorr_mc),
                 w_concorr_c,
             )
 
@@ -103,20 +92,17 @@ class TestFusedVelocityAdvectionStencil8To13(StencilTest):
 
     @pytest.fixture
     def input_data(self, grid):
-        pytest.xfail(
-            "Verification of w_concorr_c currently not working, because numpy version is incorrect."
-        )
-        z_kin_hor_e = random_field(grid, EdgeDim, KDim)
-        e_bln_c_s = random_field(grid, CellDim, C2EDim)
-        z_ekinh = zero_field(grid, CellDim, KDim)
-        z_w_concorr_me = random_field(grid, EdgeDim, KDim)
-        z_w_concorr_mc = zero_field(grid, CellDim, KDim)
-        wgtfac_c = random_field(grid, CellDim, KDim)
-        w_concorr_c = zero_field(grid, CellDim, KDim)
-        w = random_field(grid, CellDim, KDim, extend={KDim: 1})
-        z_w_con_c = zero_field(grid, CellDim, KDim, extend={KDim: 1})
+        z_kin_hor_e = random_field(grid, dims.EdgeDim, dims.KDim)
+        e_bln_c_s = random_field(grid, dims.CellDim, dims.C2EDim)
+        z_ekinh = zero_field(grid, dims.CellDim, dims.KDim)
+        z_w_concorr_me = random_field(grid, dims.EdgeDim, dims.KDim)
+        z_w_concorr_mc = zero_field(grid, dims.CellDim, dims.KDim)
+        wgtfac_c = random_field(grid, dims.CellDim, dims.KDim)
+        w_concorr_c = zero_field(grid, dims.CellDim, dims.KDim)
+        w = random_field(grid, dims.CellDim, dims.KDim, extend={dims.KDim: 1})
+        z_w_con_c = zero_field(grid, dims.CellDim, dims.KDim, extend={dims.KDim: 1})
 
-        k = indices_field(KDim, grid, is_halfdim=True, dtype=int32)
+        k = data_alloc.allocate_indices(dims.KDim, grid=grid, is_halfdim=True)
 
         nlev = grid.num_levels
         nflatlev = 4
@@ -130,7 +116,7 @@ class TestFusedVelocityAdvectionStencil8To13(StencilTest):
 
         return dict(
             z_kin_hor_e=z_kin_hor_e,
-            e_bln_c_s=as_1D_sparse_field(e_bln_c_s, CEDim),
+            e_bln_c_s=data_alloc.as_1D_sparse_field(e_bln_c_s, dims.CEDim),
             z_w_concorr_me=z_w_concorr_me,
             wgtfac_c=wgtfac_c,
             w=w,

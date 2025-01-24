@@ -1,53 +1,40 @@
 # ICON4Py - ICON inspired code in Python and GT4Py
 #
-# Copyright (c) 2022, ETH Zurich and MeteoSwiss
+# Copyright (c) 2022-2024, ETH Zurich and MeteoSwiss
 # All rights reserved.
 #
-# This file is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the
-# Free Software Foundation, either version 3 of the License, or any later
-# version. See the LICENSE.txt file at the top-level directory of this
-# distribution for a copy of the license or check <https://www.gnu.org/licenses/>.
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+import gt4py.next as gtx
 import numpy as np
 import pytest
-from gt4py.next.ffront.fbuiltins import int32
 
-from icon4py.model.atmosphere.dycore.add_extra_diffusion_for_normal_wind_tendency_approaching_cfl import (
+from icon4py.model.atmosphere.dycore.stencils.add_extra_diffusion_for_normal_wind_tendency_approaching_cfl import (
     add_extra_diffusion_for_normal_wind_tendency_approaching_cfl,
 )
-from icon4py.model.common.dimension import (
-    CellDim,
-    E2C2EODim,
-    E2CDim,
-    E2VDim,
-    EdgeDim,
-    KDim,
-    VertexDim,
-)
-from icon4py.model.common.test_utils.helpers import StencilTest, random_field, random_mask
+from icon4py.model.common import dimension as dims
 from icon4py.model.common.type_alias import vpfloat, wpfloat
+from icon4py.model.common.utils.data_allocation import random_field, random_mask
+from icon4py.model.testing.helpers import StencilTest
 
 
 def add_extra_diffusion_for_normal_wind_tendency_approaching_cfl_numpy(
-    grid,
-    levelmask: np.array,
-    c_lin_e: np.array,
-    z_w_con_c_full: np.array,
-    ddqz_z_full_e: np.array,
-    area_edge: np.array,
-    tangent_orientation: np.array,
-    inv_primal_edge_length: np.array,
-    zeta: np.array,
-    geofac_grdiv: np.array,
-    vn: np.array,
-    ddt_vn_apc: np.array,
+    connectivities: dict[gtx.Dimension, np.ndarray],
+    levelmask: np.ndarray,
+    c_lin_e: np.ndarray,
+    z_w_con_c_full: np.ndarray,
+    ddqz_z_full_e: np.ndarray,
+    area_edge: np.ndarray,
+    tangent_orientation: np.ndarray,
+    inv_primal_edge_length: np.ndarray,
+    zeta: np.ndarray,
+    geofac_grdiv: np.ndarray,
+    vn: np.ndarray,
+    ddt_vn_apc: np.ndarray,
     cfl_w_limit,
     scalfac_exdiff,
     dtime,
-) -> np.array:
+) -> np.ndarray:
     w_con_e = np.zeros_like(vn)
     difcoef = np.zeros_like(vn)
 
@@ -60,12 +47,13 @@ def add_extra_diffusion_for_normal_wind_tendency_approaching_cfl_numpy(
     tangent_orientation = np.expand_dims(tangent_orientation, axis=-1)
     inv_primal_edge_length = np.expand_dims(inv_primal_edge_length, axis=-1)
 
+    e2c = connectivities[dims.E2CDim]
     w_con_e = np.where(
         (levelmask_offset_0) | (levelmask_offset_1),
         np.sum(
             np.where(
-                (grid.connectivities[E2CDim] != -1)[:, :, np.newaxis],
-                c_lin_e * z_w_con_c_full[grid.connectivities[E2CDim]],
+                (e2c != -1)[:, :, np.newaxis],
+                c_lin_e * z_w_con_c_full[e2c],
                 0,
             ),
             axis=1,
@@ -82,6 +70,8 @@ def add_extra_diffusion_for_normal_wind_tendency_approaching_cfl_numpy(
         ),
         difcoef,
     )
+    e2v = connectivities[dims.E2VDim]
+    e2c2eo = connectivities[dims.E2C2EODim]
     ddt_vn_apc = np.where(
         ((levelmask_offset_0) | (levelmask_offset_1))
         & (np.abs(w_con_e) > cfl_w_limit * ddqz_z_full_e),
@@ -91,15 +81,13 @@ def add_extra_diffusion_for_normal_wind_tendency_approaching_cfl_numpy(
         * (
             np.sum(
                 np.where(
-                    (grid.connectivities[E2C2EODim] != -1)[:, :, np.newaxis],
-                    geofac_grdiv * vn[grid.connectivities[E2C2EODim]],
+                    (e2c2eo != -1)[:, :, np.newaxis],
+                    geofac_grdiv * vn[e2c2eo],
                     0,
                 ),
                 axis=1,
             )
-            + tangent_orientation
-            * inv_primal_edge_length
-            * (zeta[grid.connectivities[E2VDim]][:, 1] - zeta[grid.connectivities[E2VDim]][:, 0])
+            + tangent_orientation * inv_primal_edge_length * (zeta[e2v][:, 1] - zeta[e2v][:, 0])
         ),
         ddt_vn_apc,
     )
@@ -112,17 +100,17 @@ class TestAddExtraDiffusionForNormalWindTendencyApproachingCfl(StencilTest):
 
     @pytest.fixture
     def input_data(self, grid):
-        levelmask = random_mask(grid, KDim, extend={KDim: 1})
-        c_lin_e = random_field(grid, EdgeDim, E2CDim, dtype=wpfloat)
-        z_w_con_c_full = random_field(grid, CellDim, KDim, dtype=vpfloat)
-        ddqz_z_full_e = random_field(grid, EdgeDim, KDim, dtype=vpfloat)
-        area_edge = random_field(grid, EdgeDim)
-        tangent_orientation = random_field(grid, EdgeDim)
-        inv_primal_edge_length = random_field(grid, EdgeDim)
-        zeta = random_field(grid, VertexDim, KDim, dtype=vpfloat)
-        geofac_grdiv = random_field(grid, EdgeDim, E2C2EODim)
-        vn = random_field(grid, EdgeDim, KDim)
-        ddt_vn_apc = random_field(grid, EdgeDim, KDim, dtype=vpfloat)
+        levelmask = random_mask(grid, dims.KDim, extend={dims.KDim: 1})
+        c_lin_e = random_field(grid, dims.EdgeDim, dims.E2CDim, dtype=wpfloat)
+        z_w_con_c_full = random_field(grid, dims.CellDim, dims.KDim, dtype=vpfloat)
+        ddqz_z_full_e = random_field(grid, dims.EdgeDim, dims.KDim, dtype=vpfloat)
+        area_edge = random_field(grid, dims.EdgeDim)
+        tangent_orientation = random_field(grid, dims.EdgeDim)
+        inv_primal_edge_length = random_field(grid, dims.EdgeDim)
+        zeta = random_field(grid, dims.VertexDim, dims.KDim, dtype=vpfloat)
+        geofac_grdiv = random_field(grid, dims.EdgeDim, dims.E2C2EODim)
+        vn = random_field(grid, dims.EdgeDim, dims.KDim)
+        ddt_vn_apc = random_field(grid, dims.EdgeDim, dims.KDim, dtype=vpfloat)
         cfl_w_limit = vpfloat("4.0")
         scalfac_exdiff = 6.0
         dtime = 2.0
@@ -141,33 +129,33 @@ class TestAddExtraDiffusionForNormalWindTendencyApproachingCfl(StencilTest):
             dtime=dtime,
             c_lin_e=c_lin_e,
             z_w_con_c_full=z_w_con_c_full,
-            horizontal_start=int32(0),
-            horizontal_end=int32(grid.num_edges),
-            vertical_start=int32(0),
-            vertical_end=int32(grid.num_levels),
+            horizontal_start=0,
+            horizontal_end=gtx.int32(grid.num_edges),
+            vertical_start=0,
+            vertical_end=gtx.int32(grid.num_levels),
         )
 
     @staticmethod
     def reference(
-        grid,
-        levelmask: np.array,
-        c_lin_e: np.array,
-        z_w_con_c_full: np.array,
-        ddqz_z_full_e: np.array,
-        area_edge: np.array,
-        tangent_orientation: np.array,
-        inv_primal_edge_length: np.array,
-        zeta: np.array,
-        geofac_grdiv: np.array,
-        vn: np.array,
-        ddt_vn_apc: np.array,
+        connectivities: dict[gtx.Dimension, np.ndarray],
+        levelmask: np.ndarray,
+        c_lin_e: np.ndarray,
+        z_w_con_c_full: np.ndarray,
+        ddqz_z_full_e: np.ndarray,
+        area_edge: np.ndarray,
+        tangent_orientation: np.ndarray,
+        inv_primal_edge_length: np.ndarray,
+        zeta: np.ndarray,
+        geofac_grdiv: np.ndarray,
+        vn: np.ndarray,
+        ddt_vn_apc: np.ndarray,
         cfl_w_limit,
         scalfac_exdiff,
         dtime,
         **kwargs,
     ) -> dict:
         ddt_vn_apc = add_extra_diffusion_for_normal_wind_tendency_approaching_cfl_numpy(
-            grid,
+            connectivities,
             levelmask,
             c_lin_e,
             z_w_con_c_full,

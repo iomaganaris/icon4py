@@ -1,27 +1,22 @@
 # ICON4Py - ICON inspired code in Python and GT4Py
 #
-# Copyright (c) 2022, ETH Zurich and MeteoSwiss
+# Copyright (c) 2022-2024, ETH Zurich and MeteoSwiss
 # All rights reserved.
 #
-# This file is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the
-# Free Software Foundation, either version 3 of the License, or any later
-# version. See the LICENSE.txt file at the top-level directory of this
-# distribution for a copy of the license or check <https://www.gnu.org/licenses/>.
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
 
 import pytest
 from pytest import mark
 
-from icon4pytools.liskov.parsing.exceptions import (
+from icon4py.tools.liskov.parsing.exceptions import (
     DirectiveSyntaxError,
     RepeatedDirectiveError,
     RequiredDirectivesError,
     UnbalancedStencilDirectiveError,
 )
-from icon4pytools.liskov.parsing.parse import Declare, DirectivesParser, Imports, StartStencil
-from icon4pytools.liskov.parsing.validation import DirectiveSyntaxValidator
+from icon4py.tools.liskov.parsing.parse import Declare, DirectivesParser, Imports, StartStencil
+from icon4py.tools.liskov.parsing.validation import DirectiveSyntaxValidator
 
 from .conftest import insert_new_lines, scan_for_directives
 from .fortran_samples import (

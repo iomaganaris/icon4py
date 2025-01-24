@@ -1,31 +1,25 @@
 # ICON4Py - ICON inspired code in Python and GT4Py
 #
-# Copyright (c) 2022, ETH Zurich and MeteoSwiss
+# Copyright (c) 2022-2024, ETH Zurich and MeteoSwiss
 # All rights reserved.
 #
-# This file is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the
-# Free Software Foundation, either version 3 of the License, or any later
-# version. See the LICENSE.txt file at the top-level directory of this
-# distribution for a copy of the license or check <https://www.gnu.org/licenses/>.
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+import gt4py.next as gtx
 import numpy as np
 import pytest
-from gt4py.next.ffront.fbuiltins import int32
 
-from icon4py.model.atmosphere.dycore.compute_horizontal_gradient_of_exner_pressure_for_multiple_levels import (
+from icon4py.model.atmosphere.dycore.stencils.compute_horizontal_gradient_of_exner_pressure_for_multiple_levels import (
     compute_horizontal_gradient_of_exner_pressure_for_multiple_levels,
 )
-from icon4py.model.common.dimension import CellDim, E2CDim, ECDim, EdgeDim, KDim
-from icon4py.model.common.test_utils.helpers import (
-    StencilTest,
+from icon4py.model.common import dimension as dims
+from icon4py.model.common.type_alias import vpfloat, wpfloat
+from icon4py.model.common.utils.data_allocation import (
     flatten_first_two_dims,
     random_field,
     zero_field,
 )
-from icon4py.model.common.type_alias import vpfloat, wpfloat
+from icon4py.model.testing.helpers import StencilTest
 
 
 class TestComputeHorizontalGradientOfExnerPressureForMultipleLevels(StencilTest):
@@ -34,13 +28,13 @@ class TestComputeHorizontalGradientOfExnerPressureForMultipleLevels(StencilTest)
 
     @staticmethod
     def reference(
-        grid,
-        inv_dual_edge_length: np.array,
-        z_exner_ex_pr: np.array,
-        zdiff_gradp: np.array,
-        ikoffset: np.array,
-        z_dexner_dz_c_1: np.array,
-        z_dexner_dz_c_2: np.array,
+        connectivities: dict[gtx.Dimension, np.ndarray],
+        inv_dual_edge_length: np.ndarray,
+        z_exner_ex_pr: np.ndarray,
+        zdiff_gradp: np.ndarray,
+        ikoffset: np.ndarray,
+        z_dexner_dz_c_1: np.ndarray,
+        z_dexner_dz_c_2: np.ndarray,
         **kwargs,
     ) -> dict:
         def _apply_index_field(shape, to_index, neighbor_table, offset_field):
@@ -54,7 +48,7 @@ class TestComputeHorizontalGradientOfExnerPressureForMultipleLevels(StencilTest)
                         ]
             return indexed
 
-        e2c = grid.connectivities[E2CDim]
+        e2c = connectivities[dims.E2CDim]
         full_shape = e2c.shape + zdiff_gradp.shape[1:]
         zdiff_gradp = zdiff_gradp.reshape(full_shape)
         ikoffset = ikoffset.reshape(full_shape)
@@ -77,13 +71,13 @@ class TestComputeHorizontalGradientOfExnerPressureForMultipleLevels(StencilTest)
 
     @pytest.fixture
     def input_data(self, grid):
-        if np.any(grid.connectivities[E2CDim] == -1):
+        if np.any(grid.connectivities[dims.E2CDim] == -1):
             pytest.xfail("Stencil does not support missing neighbors.")
 
-        inv_dual_edge_length = random_field(grid, EdgeDim, dtype=wpfloat)
-        z_exner_ex_pr = random_field(grid, CellDim, KDim, dtype=vpfloat)
-        zdiff_gradp = random_field(grid, EdgeDim, E2CDim, KDim, dtype=vpfloat)
-        ikoffset = zero_field(grid, EdgeDim, E2CDim, KDim, dtype=int32)
+        inv_dual_edge_length = random_field(grid, dims.EdgeDim, dtype=wpfloat)
+        z_exner_ex_pr = random_field(grid, dims.CellDim, dims.KDim, dtype=vpfloat)
+        zdiff_gradp = random_field(grid, dims.EdgeDim, dims.E2CDim, dims.KDim, dtype=vpfloat)
+        ikoffset = zero_field(grid, dims.EdgeDim, dims.E2CDim, dims.KDim, dtype=gtx.int32)
 
         rng = np.random.default_rng()
         for k in range(grid.num_levels):
@@ -94,12 +88,12 @@ class TestComputeHorizontalGradientOfExnerPressureForMultipleLevels(StencilTest)
                 size=(ikoffset.shape[0], ikoffset.shape[1]),
             )
 
-        zdiff_gradp_new = flatten_first_two_dims(ECDim, KDim, field=zdiff_gradp)
-        ikoffset_new = flatten_first_two_dims(ECDim, KDim, field=ikoffset)
+        zdiff_gradp_new = flatten_first_two_dims(dims.ECDim, dims.KDim, field=zdiff_gradp)
+        ikoffset_new = flatten_first_two_dims(dims.ECDim, dims.KDim, field=ikoffset)
 
-        z_dexner_dz_c_1 = random_field(grid, CellDim, KDim, dtype=vpfloat)
-        z_dexner_dz_c_2 = random_field(grid, CellDim, KDim, dtype=vpfloat)
-        z_gradh_exner = zero_field(grid, EdgeDim, KDim, dtype=vpfloat)
+        z_dexner_dz_c_1 = random_field(grid, dims.CellDim, dims.KDim, dtype=vpfloat)
+        z_dexner_dz_c_2 = random_field(grid, dims.CellDim, dims.KDim, dtype=vpfloat)
+        z_gradh_exner = zero_field(grid, dims.EdgeDim, dims.KDim, dtype=vpfloat)
 
         return dict(
             inv_dual_edge_length=inv_dual_edge_length,
@@ -109,8 +103,8 @@ class TestComputeHorizontalGradientOfExnerPressureForMultipleLevels(StencilTest)
             z_dexner_dz_c_1=z_dexner_dz_c_1,
             z_dexner_dz_c_2=z_dexner_dz_c_2,
             z_gradh_exner=z_gradh_exner,
-            horizontal_start=int32(0),
-            horizontal_end=int32(grid.num_edges),
-            vertical_start=int32(0),
-            vertical_end=int32(grid.num_levels),
+            horizontal_start=0,
+            horizontal_end=gtx.int32(grid.num_edges),
+            vertical_start=0,
+            vertical_end=gtx.int32(grid.num_levels),
         )

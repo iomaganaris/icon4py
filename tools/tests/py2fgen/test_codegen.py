@@ -1,27 +1,23 @@
 # ICON4Py - ICON inspired code in Python and GT4Py
 #
-# Copyright (c) 2022, ETH Zurich and MeteoSwiss
+# Copyright (c) 2022-2024, ETH Zurich and MeteoSwiss
 # All rights reserved.
 #
-# This file is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the
-# Free Software Foundation, either version 3 of the License, or any later
-# version. See the LICENSE.txt file at the top-level directory of this
-# distribution for a copy of the license or check <https://www.gnu.org/licenses/>.
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+
 import string
 
 import pytest
 from gt4py.next.type_system.type_specifications import ScalarKind
-from icon4py.model.common.dimension import CellDim, KDim
 
-from icon4pytools.py2fgen.generate import (
+from icon4py.model.common import dimension as dims
+from icon4py.tools.py2fgen.generate import (
     generate_c_header,
     generate_f90_interface,
     generate_python_wrapper,
 )
-from icon4pytools.py2fgen.template import (
+from icon4py.tools.py2fgen.template import (
     CffiPlugin,
     CHeaderGenerator,
     Func,
@@ -33,15 +29,18 @@ from icon4pytools.py2fgen.template import (
 field_2d = FuncParameter(
     name="name",
     d_type=ScalarKind.FLOAT32,
-    dimensions=[CellDim, KDim],
-    py_type_hint="Field[CellDim, KDim], float64]",
+    dimensions=[dims.CellDim, dims.KDim],
+    py_type_hint="Field[dims.CellDim, dims.KDim], float64]",
 )
 field_1d = FuncParameter(
-    name="name", d_type=ScalarKind.FLOAT32, dimensions=[KDim], py_type_hint="Field[KDim], float64]"
+    name="name",
+    d_type=ScalarKind.FLOAT32,
+    dimensions=[dims.KDim],
+    py_type_hint="Field[dims.KDim], float64]",
 )
 
 simple_type = FuncParameter(
-    name="name", d_type=ScalarKind.FLOAT32, dimensions=[], py_type_hint="int32"
+    name="name", d_type=ScalarKind.FLOAT32, dimensions=[], py_type_hint="gtx.int32"
 )
 
 
@@ -55,12 +54,12 @@ def test_as_target(param, expected):
 foo = Func(
     name="foo",
     args=[
-        FuncParameter(name="one", d_type=ScalarKind.INT32, dimensions=[], py_type_hint="int32"),
+        FuncParameter(name="one", d_type=ScalarKind.INT32, dimensions=[], py_type_hint="gtx.int32"),
         FuncParameter(
             name="two",
             d_type=ScalarKind.FLOAT64,
-            dimensions=[CellDim, KDim],
-            py_type_hint="Field[CellDim, KDim], float64]",
+            dimensions=[dims.CellDim, dims.KDim],
+            py_type_hint="Field[dims.CellDim, dims.KDim], float64]",
         ),
     ],
     is_gt4py_program=False,
@@ -73,12 +72,12 @@ bar = Func(
             name="one",
             d_type=ScalarKind.FLOAT32,
             dimensions=[
-                CellDim,
-                KDim,
+                dims.CellDim,
+                dims.KDim,
             ],
-            py_type_hint="Field[CellDim, KDim], float64]",
+            py_type_hint="Field[dims.CellDim, dims.KDim], float64]",
         ),
-        FuncParameter(name="two", d_type=ScalarKind.INT32, dimensions=[], py_type_hint="int32"),
+        FuncParameter(name="two", d_type=ScalarKind.INT32, dimensions=[], py_type_hint="gtx.int32"),
     ],
     is_gt4py_program=False,
 )
@@ -118,7 +117,7 @@ def dummy_plugin():
 
 
 def test_fortran_interface(dummy_plugin):
-    interface = generate_f90_interface(dummy_plugin)
+    interface = generate_f90_interface(dummy_plugin, limited_area=True)
     expected = """
     module libtest_plugin
    use, intrinsic :: iso_c_binding
@@ -238,15 +237,21 @@ end module
 
 
 def test_python_wrapper(dummy_plugin):
-    interface = generate_python_wrapper(dummy_plugin, "GPU", False)
+    interface = generate_python_wrapper(
+        dummy_plugin, "GPU", False, limited_area=True, profile=False
+    )
     expected = '''
 # imports for generated wrapper code
 import logging
+import math
 from libtest_plugin import ffi
 import numpy as np
 import cupy as cp
 from numpy.typing import NDArray
 from gt4py.next.iterator.embedded import np_as_located_field
+from icon4py.tools.py2fgen.settings import config
+xp = config.array_ns
+from icon4py.model.common import dimension as dims
 
 # logger setup
 log_format = '%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s'
@@ -254,6 +259,8 @@ logging.basicConfig(level=logging.ERROR,
                     format=log_format,
                     datefmt='%Y-%m-%d %H:%M:%S')
 logging.info(cp.show_config())
+
+import numpy as np
 
 # embedded module imports
 import foo_module_x
@@ -286,7 +293,7 @@ def unpack_gpu(ptr, *sizes: int):
     if not sizes:
         raise ValueError("Sizes must be provided to determine the array shape.")
 
-    length = np.prod(sizes)
+    length = math.prod(sizes)
     c_type = ffi.getctype(ffi.typeof(ptr).item)
 
     dtype_map = {
@@ -306,7 +313,6 @@ def unpack_gpu(ptr, *sizes: int):
     mem = cp.cuda.UnownedMemory(ptr_val, total_size, owner=ptr, device_id=current_device.id)
     memptr = cp.cuda.MemoryPointer(mem, 0)
     arr = cp.ndarray(shape=sizes, dtype=dtype, memptr=memptr, order="F")
-
     return arr
 
 def int_array_to_bool_array(int_array: NDArray) -> NDArray:
@@ -324,13 +330,13 @@ def int_array_to_bool_array(int_array: NDArray) -> NDArray:
     return bool_array
 
 @ffi.def_extern()
-def foo_wrapper(one: int32, two: Field[CellDim, KDim], float64], n_Cell: int32, n_K: int32):
+def foo_wrapper(one: gtx.int32, two: Field[dims.CellDim, dims.KDim], float64], n_Cell: gtx.int32, n_K: gtx.int32):
     try:
         # Unpack pointers into Ndarrays
         two = unpack_gpu(two, n_Cell, n_K)
 
         # Allocate GT4Py Fields
-        two = np_as_located_field(CellDim, KDim)(two)
+        two = np_as_located_field(dims.CellDim, dims.KDim)(two)
 
         foo(one, two)
 
@@ -341,13 +347,13 @@ def foo_wrapper(one: int32, two: Field[CellDim, KDim], float64], n_Cell: int32, 
     return 0
 
 @ffi.def_extern()
-def bar_wrapper(one: Field[CellDim, KDim], float64], two: int32, n_Cell: int32, n_K: int32):
+def bar_wrapper(one: Field[dims.CellDim, dims.KDim], float64], two: gtx.int32, n_Cell: gtx.int32, n_K: gtx.int32):
     try:
         # Unpack pointers into Ndarrays
         one = unpack_gpu(one, n_Cell, n_K)
 
         # Allocate GT4Py Fields
-        one = np_as_located_field(CellDim, KDim)(one)
+        one = np_as_located_field(dims.CellDim, dims.KDim)(one)
 
         bar(one, two)
 

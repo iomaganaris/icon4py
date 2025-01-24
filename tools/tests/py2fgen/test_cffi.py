@@ -1,15 +1,11 @@
 # ICON4Py - ICON inspired code in Python and GT4Py
 #
-# Copyright (c) 2022, ETH Zurich and MeteoSwiss
+# Copyright (c) 2022-2024, ETH Zurich and MeteoSwiss
 # All rights reserved.
 #
-# This file is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the
-# Free Software Foundation, either version 3 of the License, or any later
-# version. See the LICENSE.txt file at the top-level directory of this
-# distribution for a copy of the license or check <https://www.gnu.org/licenses/>.
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+
 import subprocess
 import tempfile
 from pathlib import Path
@@ -18,7 +14,7 @@ import numpy as np
 import pytest
 from cffi import FFI
 
-from icon4pytools.py2fgen.plugin import generate_and_compile_cffi_plugin, unpack
+from icon4py.tools.py2fgen.plugin import generate_and_compile_cffi_plugin, unpack
 
 
 @pytest.fixture
@@ -69,8 +65,12 @@ def test_compile_and_run_cffi_plugin_from_C():
 
         try:
             # Generate and compile the CFFI plugin, which creates lib{plugin_name}.so
-            generate_and_compile_cffi_plugin(plugin_name, c_header, python_wrapper, build_path)
-            compiled_library_path = build_path / f"lib{plugin_name}.so"
+            backend = "CPU"
+            shared_library = f"{plugin_name}_{backend.lower()}"
+            generate_and_compile_cffi_plugin(
+                plugin_name, c_header, python_wrapper, build_path, backend
+            )
+            compiled_library_path = build_path / f"lib{shared_library}.so"
 
             # Verify the shared library was created
             assert (
@@ -91,7 +91,7 @@ def test_compile_and_run_cffi_plugin_from_C():
                     build_path / "test_program",
                     str(main_program_path),
                     "-L" + str(build_path),
-                    "-l" + plugin_name,
+                    "-l" + shared_library,
                     "-Wl,-rpath=" + str(build_path),
                 ],
                 check=True,
