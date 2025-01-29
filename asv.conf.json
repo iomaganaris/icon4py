@@ -30,7 +30,10 @@
 
     // Customizable commands for installing and uninstalling the project.
     // See asv.conf.json documentation.
-    "install_command": ["uv pip install ."],
+    "install_command": [
+        "uv pip install .",
+        "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_runtimes_{commit}.json --benchmark-only --memray"
+    ],
     // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
 
     // List of branches to benchmark. If not provided, defaults to "main"
@@ -95,6 +98,7 @@
             "uv": [],
             "pytest": [],
             "pytest-benchmark": [],
+            "git+https://github.com/iomaganaris/pytest-memray.git@pytest_json": [],
         },
         // "env": {"ENV_VAR_1": ["val1", "val2"]},
         // "env_nobuild": {"ENV_VAR_2": ["val3", null]},
