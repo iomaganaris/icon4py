@@ -1,30 +1,52 @@
 import pytest
 import json
 import os
+import traceback
 
 BENCHMARKS = {}
 PREFIX = "track_"
 BENCHMARK_DIR = os.environ.get("ASV_BUILD_DIR", None)
 COMMIT_HASH = os.environ.get("ASV_COMMIT", None)
-BENCHMARK_FILENAME = f"benchmark_runtimes_{COMMIT_HASH}.json"
+GT4PY_BACKEND = os.environ.get("GT4PY_BACKEND", None)
+ICON4PY_GRID = os.environ.get("ICON4PY_GRID", None)
+BENCHMARK_FILENAME = "benchmark_{}_{}_{}.json".format(COMMIT_HASH, GT4PY_BACKEND, ICON4PY_GRID)
 
 benchmark_file_path = os.path.join(BENCHMARK_DIR, BENCHMARK_FILENAME) if BENCHMARK_DIR else BENCHMARK_FILENAME
+
+if not os.path.exists(benchmark_file_path):
+    print(f"BENCHMARKS: {BENCHMARKS}")
+    print(f"PREFIX: {PREFIX}")
+    print(f"BENCHMARK_DIR: {BENCHMARK_DIR}")
+    print(f"COMMIT_HASH: {COMMIT_HASH}")
+    print(f"GT4PY_BACKEND: {GT4PY_BACKEND}")
+    print(f"ICON4PY_GRID: {ICON4PY_GRID}")
+    print(f"BENCHMARK_FILENAME: {BENCHMARK_FILENAME}")
+    print(f"benchmark_file_path: {benchmark_file_path}")
+    traceback.print_stack()
+    pytest.main([os.path.join(os.path.dirname(__file__), "../model/atmosphere/dycore/tests"), "--benchmark-json", benchmark_file_path, "--benchmark-only", "--backend", GT4PY_BACKEND, "--grid", ICON4PY_GRID, "-k", "test_fused_velocity_advection_stencil_15_to_18", "--benchmark-min-rounds=1"])
+else:
+    print("Benchmark file exists")
+    traceback.print_stack()
+
 with open(benchmark_file_path, "r") as f:
     benchmark_data = json.load(f)
 
     for benchmark in benchmark_data["benchmarks"]:
         benchmark_name = benchmark["name"]
-        time = benchmark["stats"]["median"]
-        asv_runtime_name = "{}runtime_{}".format(PREFIX, benchmark_name.replace("-", "_").replace("=", "_").replace("[", "_").replace("]", "_"))
-        def asv_runtime_method(self, t=time): return t
-        asv_runtime_method.unit = "s"
-        asv_runtime_method.number = 1
-        asv_runtime_method.repeat = 1
-        BENCHMARKS[asv_runtime_name] = asv_runtime_method
-        mem_high_watermark = benchmark["extra_info"]["memory_high_watermark"]
-        asv_mem_name = "{}mem_{}".format(PREFIX, benchmark_name.replace("-", "_").replace("=", "_").replace("[", "_").replace("]", "_"))
-        def asv_memray_method(self, mem_high_watermark=mem_high_watermark): return mem_high_watermark
-        asv_memray_method.unit = "MB"
-        asv_memray_method.number = 1
-        asv_memray_method.repeat = 1
-        BENCHMARKS[asv_mem_name] = asv_memray_method
+        if GT4PY_BACKEND in benchmark_name:
+            if ICON4PY_GRID in benchmark_name:
+                filtered_name = benchmark_name.replace("-", "_").replace("=", "_").replace("[", "_").replace("]", "_").replace(f"_benchmark_backend_{GT4PY_BACKEND}_", "_").replace(f"_grid_{ICON4PY_GRID}_", "_").replace("_test_", "_")
+                time = benchmark["stats"]["median"]
+                asv_runtime_name = "{}runtime_{}".format(PREFIX, filtered_name)
+                def asv_runtime_method(self, t=0.1): return t
+                asv_runtime_method.unit = "s"
+                asv_runtime_method.number = 1
+                asv_runtime_method.repeat = 1
+                BENCHMARKS[asv_runtime_name] = asv_runtime_method
+                # mem_high_watermark = benchmark["extra_info"]["memory_high_watermark"]
+                # asv_mem_name = "{}mem_{}".format(PREFIX, filtered_name)
+                # def asv_memray_method(self, mem_high_watermark=mem_high_watermark): return mem_high_watermark
+                # asv_memray_method.unit = "MB"
+                # asv_memray_method.number = 1
+                # asv_memray_method.repeat = 1
+                # BENCHMARKS[asv_mem_name] = asv_memray_method

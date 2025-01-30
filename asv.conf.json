@@ -32,7 +32,13 @@
     // See asv.conf.json documentation.
     "install_command": [
         "uv pip install .",
-        "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_runtimes_{commit}.json --benchmark-only --memray"
+        // "pip install pytest-benchmark pytest-memray",
+        // "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_{commit}_roundtrip_simple_grid.json --benchmark-only --memray --backend roundtrip --grid simple_grid -k TestFusedSolveNonhydroStencil39To40 --benchmark-min-rounds=1",
+        // "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_runtimes_{commit}.json --benchmark-only --memray --backend gtfn_cpu --grid simple_grid -k TestFusedSolveNonhydroStencil39To40",
+        // "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_{commit}_roundtrip_icon_grid.json --benchmark-only --memray --backend roundtrip --grid icon_grid -k TestFusedSolveNonhydroStencil39To40 --benchmark-min-rounds=1",
+        // "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_runtimes_{commit}.json --benchmark-only --memray --backend gtfn_cpu --grid icon_grid -k TestFusedSolveNonhydroStencil39To40",
+        // "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_runtimes_{commit}.json --benchmark-only --memray --backend roundtrip --grid icon_grid_global -k TestFusedSolveNonhydroStencil39To40",
+        // "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_runtimes_{commit}.json --benchmark-only --memray --backend gtfn_cpu --grid icon_grid_global -k TestFusedSolveNonhydroStencil39To40",
     ],
     // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
 
@@ -100,7 +106,7 @@
             "pytest-benchmark": [],
             "git+https://github.com/iomaganaris/pytest-memray.git@pytest_json": [],
         },
-        // "env": {"ENV_VAR_1": ["val1", "val2"]},
+        "env_nobuild": {"GT4PY_BACKEND": ["roundtrip"], "ICON4PY_GRID": ["simple_grid", "icon_grid"]},
         // "env_nobuild": {"ENV_VAR_2": ["val3", null]},
     },
 
