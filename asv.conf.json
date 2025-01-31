@@ -104,7 +104,7 @@
             "pytest-benchmark": [],
             "git+https://github.com/iomaganaris/pytest-memray.git@pytest_json": [],
         },
-        "env": {"GT4PY_BACKEND": ["roundtrip", "gtfn_cpu"], "ICON4PY_GRID": ["simple_grid"]},
+        "env": {"GT4PY_BACKEND": ["roundtrip", "gtfn_cpu"], "ICON4PY_GRID": ["simple_grid", "icon_grid"]},
         // "env_nobuild": {"ENV_VAR_2": ["val3", null]},
     },
 
