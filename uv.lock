@@ -1398,7 +1398,7 @@ wheels = [
 [[package]]
 name = "gt4py"
 version = "1.0.4"
-source = { git = "https://github.com/iomaganaris/gt4py?tag=icon4py_20241113_cache_python_fix#b83ee925a8122f5911dd58d77f96a074f3838cbc" }
+source = { git = "https://github.com/GridTools/gt4py?tag=icon4py_20241113_cache_fix#40e2c0b1e0fa469c7c17d789214d5a114b3711fc" }
 dependencies = [
     { name = "attrs" },
     { name = "black" },
@@ -1660,7 +1660,7 @@ dev = [
     { name = "icon4py-testing", editable = "model/testing" },
     { name = "mypy", extras = ["faster-cache"], specifier = ">=1.13.0" },
     { name = "myst-parser", specifier = ">=4.0.0" },
-    { name = "nox", git = "https://github.com/wntrblm/nox.git?rev=aa09595437608dfe21eb776d8a4bcc0bd5f9916b#aa09595437608dfe21eb776d8a4bcc0bd5f9916b" },
+    { name = "nox", git = "https://github.com/wntrblm/nox.git?rev=aa09595437608dfe21eb776d8a4bcc0bd5f9916b" },
     { name = "pip", specifier = ">=22.1.1" },
     { name = "pre-commit", specifier = ">=4.0.1" },
     { name = "pytest", specifier = ">=8.0.1" },
@@ -1700,7 +1700,7 @@ lint = [
 test = [
     { name = "coverage", extras = ["toml"], specifier = ">=7.5.0" },
     { name = "icon4py-testing", editable = "model/testing" },
-    { name = "nox", git = "https://github.com/wntrblm/nox.git?rev=aa09595437608dfe21eb776d8a4bcc0bd5f9916b#aa09595437608dfe21eb776d8a4bcc0bd5f9916b" },
+    { name = "nox", git = "https://github.com/wntrblm/nox.git?rev=aa09595437608dfe21eb776d8a4bcc0bd5f9916b" },
     { name = "pytest", specifier = ">=8.0.1" },
     { name = "pytest-benchmark", specifier = ">=5.0.0" },
     { name = "pytest-cache", specifier = ">=1.0" },
