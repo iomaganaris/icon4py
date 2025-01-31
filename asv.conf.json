@@ -7,7 +7,7 @@
     "project": "icon4py",
 
     // The project's homepage
-    "project_url": "https://github.com/C2SM/icon4py",
+    "project_url": "https://github.com/iomaganaris/icon4py",
 
     // The URL or local path of the source code repository for the
     // project being benchmarked
@@ -106,7 +106,7 @@
             "pytest-benchmark": [],
             "git+https://github.com/iomaganaris/pytest-memray.git@pytest_json": [],
         },
-        "env_nobuild": {"GT4PY_BACKEND": ["roundtrip"], "ICON4PY_GRID": ["simple_grid", "icon_grid"]},
+        "env_nobuild": {"GT4PY_BACKEND": ["roundtrip", "gtfn_cpu"], "ICON4PY_GRID": ["simple_grid"]},
         // "env_nobuild": {"ENV_VAR_2": ["val3", null]},
     },
 
