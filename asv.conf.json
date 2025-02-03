@@ -21,9 +21,9 @@
     // Customizable commands for building the project.
     // See asv.conf.json documentation.
     // To build the package using pyproject.toml (PEP518), uncomment the following lines
-    "build_command": ["uv pip install .",
-        "python3.11 -c \"import os; print(os.environ.get('GT4PY_BACKEND'))\"",
-        "python3.11 {conf_dir}/asv_util/run_tests.py"
+    "build_command": ["uv pip install ."
+        // "python3.11 -c \"import os; print(os.environ.get('GT4PY_BACKEND'))\"",
+        // "python3.11 {conf_dir}/asv_util/run_tests.py"
     ],
     // To build the package using setuptools and a setup.py file, uncomment the following lines
     // "build_command": [
@@ -37,6 +37,7 @@
         // "uv pip install .",
         // "python3.11 -c \"import os; print(os.environ.get('GT4PY_BACKEND'))\"",
         // "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_{commit}_{GT4PY_BACKEND}_{ICON4PY_GRID}.json --benchmark-only --memray --backend {GT4PY_BACKEND} --grid {ICON4PY_GRID} -k TestFusedSolveNonhydroStencil39To40 --benchmark-min-rounds=1"
+        "python3.11 {conf_dir}/asv_util/run_tests.py"
     ],
     // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
 
@@ -61,7 +62,7 @@
 
     // timeout in seconds for installing any dependencies in environment
     // defaults to 10 min
-    //"install_timeout": 600,
+    "install_timeout": 600,
 
     // the base URL to show a commit for the project.
     // "show_commit_url": "http://github.com/owner/project/commit/",
