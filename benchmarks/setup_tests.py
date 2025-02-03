@@ -43,10 +43,10 @@ with open(benchmark_file_path, "r") as f:
                 asv_runtime_method.number = 1
                 asv_runtime_method.repeat = 1
                 BENCHMARKS[asv_runtime_name] = asv_runtime_method
-                # mem_high_watermark = benchmark["extra_info"]["memory_high_watermark"]
-                # asv_mem_name = "{}mem_{}".format(PREFIX, filtered_name)
-                # def asv_memray_method(self, mem_high_watermark=mem_high_watermark): return mem_high_watermark
-                # asv_memray_method.unit = "MB"
-                # asv_memray_method.number = 1
-                # asv_memray_method.repeat = 1
-                # BENCHMARKS[asv_mem_name] = asv_memray_method
+                mem_high_watermark = benchmark["extra_info"]["memory_high_watermark"]
+                asv_mem_name = "{}mem_{}".format(PREFIX, filtered_name)
+                def asv_memray_method(self, mem_high_watermark=mem_high_watermark): return mem_high_watermark
+                asv_memray_method.unit = "MB"
+                asv_memray_method.number = 1
+                asv_memray_method.repeat = 1
+                BENCHMARKS[asv_mem_name] = asv_memray_method
