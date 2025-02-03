@@ -17,8 +17,11 @@ COMMIT_HASH = os.environ.get("ASV_COMMIT", None)
 if COMMIT_HASH is None:
     print("Error: COMMIT_HASH environment variable is not set.")
     exit(1)
-BENCHMARK_FILENAME = "benchmark_{}_{}_{}.json".format(COMMIT_HASH, GT4PY_BACKEND, ICON4PY_GRID)
+BENCHMARK_RUNTIME_FILENAME = "benchmark_runtime_{}_{}_{}.json".format(COMMIT_HASH, GT4PY_BACKEND, ICON4PY_GRID)
+BENCHMARK_MEMRAY_FILENAME = "benchmark_memray_{}_{}_{}.json".format(COMMIT_HASH, GT4PY_BACKEND, ICON4PY_GRID)
 
-benchmark_file_path = os.path.join(BENCHMARK_DIR, BENCHMARK_FILENAME) if BENCHMARK_DIR else BENCHMARK_FILENAME
+benchmark_runtime_file_path = os.path.join(BENCHMARK_DIR, BENCHMARK_RUNTIME_FILENAME) if BENCHMARK_DIR else BENCHMARK_RUNTIME_FILENAME
+benchmark_memray_file_path = os.path.join(BENCHMARK_DIR, BENCHMARK_MEMRAY_FILENAME) if BENCHMARK_DIR else BENCHMARK_MEMRAY_FILENAME
 
-pytest.main([os.path.join(os.path.dirname(__file__), "../model/atmosphere/dycore/tests"), "--benchmark-json", benchmark_file_path, "--benchmark-only", "--backend", GT4PY_BACKEND, "--grid", ICON4PY_GRID, "-k", "test_fused_velocity_advection_stencil_15_to_18", "--benchmark-min-rounds=1", "--memray"])
+pytest.main([os.path.join(os.path.dirname(__file__), "../model/atmosphere/dycore/tests"), "--benchmark-json", benchmark_runtime_file_path, "--benchmark-only", "--backend", GT4PY_BACKEND, "--grid", ICON4PY_GRID, "-k", "test_fused_velocity_advection_stencil_15_to_18", "--benchmark-min-rounds=1"])
+pytest.main([os.path.join(os.path.dirname(__file__), "../model/atmosphere/dycore/tests"), "--benchmark-json", benchmark_memray_file_path, "--benchmark-only", "--backend", GT4PY_BACKEND, "--grid", ICON4PY_GRID, "-k", "test_fused_velocity_advection_stencil_15_to_18", "--benchmark-min-rounds=1", "--memray"])

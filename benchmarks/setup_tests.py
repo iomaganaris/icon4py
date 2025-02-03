@@ -9,25 +9,29 @@ BENCHMARK_DIR = os.environ.get("ASV_BUILD_DIR", os.path.join(os.environ.get("ASV
 COMMIT_HASH = os.environ.get("ASV_COMMIT", None)
 GT4PY_BACKEND = os.environ.get("GT4PY_BACKEND", None)
 ICON4PY_GRID = os.environ.get("ICON4PY_GRID", None)
-BENCHMARK_FILENAME = "benchmark_{}_{}_{}.json".format(COMMIT_HASH, GT4PY_BACKEND, ICON4PY_GRID)
+BENCHMARK_RUNTIME_FILENAME = "benchmark_runtime_{}_{}_{}.json".format(COMMIT_HASH, GT4PY_BACKEND, ICON4PY_GRID)
+BENCHMARK_MEMRAY_FILENAME = "benchmark_memray_{}_{}_{}.json".format(COMMIT_HASH, GT4PY_BACKEND, ICON4PY_GRID)
 
-benchmark_file_path = os.path.join(BENCHMARK_DIR, BENCHMARK_FILENAME) if BENCHMARK_DIR else BENCHMARK_FILENAME
+benchmark_runtime_file_path = os.path.join(BENCHMARK_DIR, BENCHMARK_RUNTIME_FILENAME) if BENCHMARK_DIR else BENCHMARK_RUNTIME_FILENAME
+benchmark_memray_file_path = os.path.join(BENCHMARK_DIR, BENCHMARK_MEMRAY_FILENAME) if BENCHMARK_DIR else BENCHMARK_MEMRAY_FILENAME
 
-if not os.path.exists(benchmark_file_path):
-    print(f"BENCHMARKS: {BENCHMARKS}")
-    print(f"PREFIX: {PREFIX}")
-    print(f"BENCHMARK_DIR: {BENCHMARK_DIR}")
-    print(f"COMMIT_HASH: {COMMIT_HASH}")
-    print(f"GT4PY_BACKEND: {GT4PY_BACKEND}")
-    print(f"ICON4PY_GRID: {ICON4PY_GRID}")
-    print(f"BENCHMARK_FILENAME: {BENCHMARK_FILENAME}")
-    print(f"benchmark_file_path: {benchmark_file_path}")
-    for key, value in os.environ.items():
-        if key.startswith("ASV_"):
-            print(f"{key}: {value}")
+if not os.path.exists(benchmark_runtime_file_path):
+    print(f"Error: Benchmark runtime file {benchmark_runtime_file_path} does not exist.")
+    exit(1)
+    # print(f"BENCHMARKS: {BENCHMARKS}")
+    # print(f"PREFIX: {PREFIX}")
+    # print(f"BENCHMARK_DIR: {BENCHMARK_DIR}")
+    # print(f"COMMIT_HASH: {COMMIT_HASH}")
+    # print(f"GT4PY_BACKEND: {GT4PY_BACKEND}")
+    # print(f"ICON4PY_GRID: {ICON4PY_GRID}")
+    # print(f"BENCHMARK_FILENAME: {BENCHMARK_RUNTIME_FILENAME}")
+    # print(f"benchmark_runtime_file_path: {benchmark_runtime_file_path}")
+    # for key, value in os.environ.items():
+    #     if key.startswith("ASV_"):
+    #         print(f"{key}: {value}")
     # pytest.main([os.path.join(os.path.dirname(__file__), "../model/atmosphere/dycore/tests"), "--benchmark-json", benchmark_file_path, "--benchmark-only", "--backend", GT4PY_BACKEND, "--grid", ICON4PY_GRID, "-k", "test_fused_velocity_advection_stencil_15_to_18", "--benchmark-min-rounds=1"])
 
-with open(benchmark_file_path, "r") as f:
+with open(benchmark_runtime_file_path, "r") as f:
     benchmark_data = json.load(f)
 
     for benchmark in benchmark_data["benchmarks"]:
@@ -43,6 +47,16 @@ with open(benchmark_file_path, "r") as f:
                 asv_runtime_method.number = 1
                 asv_runtime_method.repeat = 1
                 BENCHMARKS[asv_runtime_name] = asv_runtime_method
+
+with open(benchmark_memray_file_path, "r") as f:
+    benchmark_data = json.load(f)
+
+    for benchmark in benchmark_data["benchmarks"]:
+        benchmark_name = benchmark["name"]
+        if GT4PY_BACKEND in benchmark_name:
+            if ICON4PY_GRID in benchmark_name:
+                filtered_name = benchmark_name.replace("-", "_").replace("=", "_").replace("[", "_").replace("]", "_").replace(f"_benchmark_backend_{GT4PY_BACKEND}_", "_").replace(f"_grid_{ICON4PY_GRID}_", "_").replace("_test_", "_")
+                print("Filtered name: {}".format(filtered_name))
                 mem_high_watermark = benchmark["extra_info"]["memory_high_watermark"]
                 asv_mem_name = "{}mem_{}".format(PREFIX, filtered_name)
                 def asv_memray_method(self, mem_high_watermark=mem_high_watermark): return mem_high_watermark
