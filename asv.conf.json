@@ -37,7 +37,7 @@
         // "uv pip install .",
         // "python3.11 -c \"import os; print(os.environ.get('GT4PY_BACKEND'))\"",
         // "pytest model/atmosphere/dycore/tests --benchmark-json {build_dir}/benchmark_{commit}_{GT4PY_BACKEND}_{ICON4PY_GRID}.json --benchmark-only --memray --backend {GT4PY_BACKEND} --grid {ICON4PY_GRID} -k TestFusedSolveNonhydroStencil39To40 --benchmark-min-rounds=1"
-        "python3.11 {conf_dir}/asv_util/run_tests.py"
+        "python {conf_dir}/asv_util/run_tests.py"
     ],
     // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
 
@@ -62,7 +62,7 @@
 
     // timeout in seconds for installing any dependencies in environment
     // defaults to 10 min
-    "install_timeout": 600,
+    "install_timeout": 1200,
 
     // the base URL to show a commit for the project.
     // "show_commit_url": "http://github.com/owner/project/commit/",
@@ -104,8 +104,10 @@
             "pytest": [],
             "pytest-benchmark": [],
             "git+https://github.com/iomaganaris/pytest-memray.git@pytest_json": [],
+            "nvidia-cuda-runtime-cu12==12.3.101": [],
+            "cupy-cuda12x": [],
         },
-        "env": {"GT4PY_BACKEND": ["roundtrip", "gtfn_cpu"], "ICON4PY_GRID": ["simple_grid", "icon_grid"]},
+        "env": {"GT4PY_BACKEND": ["gtfn_cpu", "gtfn_gpu"], "ICON4PY_GRID": ["icon_grid", "icon_grid_global"], "MEMRAY": ["ON", null]},
         // "env_nobuild": {"ENV_VAR_2": ["val3", null]},
     },
 
@@ -137,11 +139,12 @@
     // - env_nobuild
     //     Non-build environment variables
     //
-    // "exclude": [
+     "exclude": [
     //     {"python": "3.2", "sys_platform": "win32"}, // skip py3.2 on windows
     //     {"environment_type": "conda", "req": {"six": null}}, // don't run without six on conda
-    //     {"env": {"ENV_VAR_1": "val2"}}, // skip val2 for ENV_VAR_1
-    // ],
+    //    {"env": {"ENV_VAR_1": "val2"}}, // skip val2 for ENV_VAR_1
+        {"env": {"GT4PY_BACKEND": "gtfn_gpu", "MEMRAY": "ON"}},
+    ],
     //
     // "include": [
     //     // additional env for python3.12
