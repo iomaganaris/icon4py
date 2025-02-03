@@ -21,6 +21,7 @@ Remember that important design decisions should be properly documented for futur
 -->
 ## Code Style
 
+
 We follow the [Google Python Style Guide][google-style-guide] with a few minor changes (mentioned below). Since the best way to remember something is to understand the reasons behind it, make sure you go through the style guide at least once, paying special attention to the discussions in the _Pros_, _Cons_, and _Decision_ subsections.
 
 We deviate from the [Google Python Style Guide][google-style-guide] only in the following points:
