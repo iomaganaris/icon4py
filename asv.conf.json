@@ -140,7 +140,7 @@
     "exclude": [
     //     {"python": "3.2", "sys_platform": "win32"}, // skip py3.2 on windows
     //     {"environment_type": "conda", "req": {"six": null}}, // don't run without six on conda
-        {"env": {"GT4PY_BACKEND": "roundtip", "ICON4PY_GRID": "icon_grid"}},
+        {"env": {"ICON4PY_GRID": "icon_grid", "GT4PY_BACKEND": "roundtrip"}}, // skip val2 for ENV_VAR_1
     ],
     //
     // "include": [
