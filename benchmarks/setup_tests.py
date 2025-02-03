@@ -30,6 +30,9 @@ if not os.path.exists(benchmark_runtime_file_path):
     #     if key.startswith("ASV_"):
     #         print(f"{key}: {value}")
     # pytest.main([os.path.join(os.path.dirname(__file__), "../model/atmosphere/dycore/tests"), "--benchmark-json", benchmark_file_path, "--benchmark-only", "--backend", GT4PY_BACKEND, "--grid", ICON4PY_GRID, "-k", "test_fused_velocity_advection_stencil_15_to_18", "--benchmark-min-rounds=1"])
+if not os.path.exists(benchmark_memray_file_path):
+    print(f"Error: Benchmark memray file {benchmark_memray_file_path} does not exist.")
+    exit(1)
 
 with open(benchmark_runtime_file_path, "r") as f:
     benchmark_data = json.load(f)
