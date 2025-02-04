@@ -139,7 +139,7 @@
     // - env_nobuild
     //     Non-build environment variables
     //
-     "exclude": [
+    "exclude": [
     //     {"python": "3.2", "sys_platform": "win32"}, // skip py3.2 on windows
     //     {"environment_type": "conda", "req": {"six": null}}, // don't run without six on conda
     //    {"env": {"ENV_VAR_1": "val2"}}, // skip val2 for ENV_VAR_1
