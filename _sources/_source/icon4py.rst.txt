@@ -1,4 +1,0 @@
-icon4py namespace
-=================
-
-.. py:module:: icon4py
