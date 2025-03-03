@@ -5,16 +5,23 @@
 #
 # Please, refer to the LICENSE file in the root directory.
 # SPDX-License-Identifier: BSD-3-Clause
-
 import os
+from typing import Final
 
 import pytest
+from gt4py.next import backend as gtx_backend
 
 from icon4py.model.common import model_backends
+from icon4py.model.common.grid import base as base_grid, simple as simple_grid
 from icon4py.model.testing.datatest_utils import (
     GLOBAL_EXPERIMENT,
     REGIONAL_EXPERIMENT,
 )
+from icon4py.model.testing.helpers import apply_markers
+
+
+DEFAULT_GRID: Final[str] = "simple_grid"
+VALID_GRIDS: tuple[str, str, str] = ("simple_grid", "icon_grid", "icon_grid_global", "torus_grid")
 
 
 def _check_backend_validity(backend_name: str) -> None:
@@ -25,6 +32,37 @@ def _check_backend_validity(backend_name: str) -> None:
             + available_backends
             + "] and pass it as an argument to --backend when invoking pytest."
         )
+
+
+def _check_grid_validity(grid_name: str) -> None:
+    assert (
+        grid_name in VALID_GRIDS
+    ), f"Invalid value for '--grid' option - possible names are {VALID_GRIDS}"
+
+
+@pytest.fixture(scope="session")
+def backend(request):
+    try:
+        backend_option = request.config.getoption("backend")
+    except ValueError:
+        backend_option = model_backends.DEFAULT_BACKEND
+    else:
+        _check_backend_validity(backend_option)
+
+    selected_backend = model_backends.BACKENDS[backend_option]
+    return selected_backend
+
+
+@pytest.fixture(scope="session")
+def grid(request, backend):
+    try:
+        grid_option = request.config.getoption("grid")
+    except ValueError:
+        grid_option = DEFAULT_GRID
+    else:
+        _check_grid_validity(grid_option)
+    grid = _get_grid(grid_option, backend)
+    return grid
 
 
 def pytest_configure(config):
@@ -38,8 +76,8 @@ def pytest_configure(config):
         os.environ["FLOAT_PRECISION"] = "mixed"
 
     if config.getoption("--backend"):
-        backend = config.getoption("--backend")
-        _check_backend_validity(backend)
+        backend_option = config.getoption("--backend")
+        _check_backend_validity(backend_option)
 
 
 def pytest_addoption(parser):
@@ -86,74 +124,60 @@ def pytest_addoption(parser):
         pass
 
 
+def _get_grid(
+    selected_grid_type: str, selected_backend: gtx_backend.Backend | None
+) -> base_grid.BaseGrid:
+    match selected_grid_type:
+        case "torus_grid":
+            from icon4py.model.common.grid.grid_manager import (  # type: ignore [import-not-found]
+                GridManager,
+                ToZeroBasedIndexTransformation,
+            )
+
+            from icon4py.model.common.grid.vertical import VerticalGridConfig  # type: ignore [import-not-found]
+            TORUS_GRID_FILE = "/Users/ioannmag/cscs_repos/cycle20/icon-structured/tests/data/torus_grid/torus_100000_100000_24576.nc"
+            def init_grid_manager(fname, num_levels=65, transformation=ToZeroBasedIndexTransformation()):
+                grid_manager = GridManager(transformation, fname, VerticalGridConfig(num_levels))
+                grid_manager(backend=selected_backend)
+                return grid_manager
+
+            def get_torus_grid():
+                grid_manager = init_grid_manager(TORUS_GRID_FILE)
+                return grid_manager.grid
+            grid_instance = get_torus_grid()
+            return grid_instance
+        case "icon_grid":
+            from icon4py.model.testing.grid_utils import (
+                get_grid_manager_for_experiment,
+            )
+
+            grid_instance = get_grid_manager_for_experiment(
+                REGIONAL_EXPERIMENT, backend=selected_backend
+            ).grid
+            return grid_instance
+        case "icon_grid_global":
+            from icon4py.model.testing.grid_utils import (
+                get_grid_manager_for_experiment,
+            )
+
+            grid_instance = get_grid_manager_for_experiment(
+                GLOBAL_EXPERIMENT, backend=selected_backend
+            ).grid
+            return grid_instance
+        case _:
+            return simple_grid.SimpleGrid()
+
+
 def pytest_runtest_setup(item):
-    for _ in item.iter_markers(name="datatest"):
-        if not item.config.getoption("--datatest"):
-            pytest.skip("need '--datatest' option to run")
-
-
-def pytest_generate_tests(metafunc):
-    selected_backend = model_backends.BACKENDS[model_backends.DEFAULT_BACKEND]
-
-    # parametrise backend
-    if "backend" in metafunc.fixturenames:
-        backend_option = metafunc.config.getoption("backend")
-        _check_backend_validity(backend_option)
-
-        selected_backend = model_backends.BACKENDS[backend_option]
-        metafunc.parametrize("backend", [selected_backend], ids=[f"backend={backend_option}"])
-
-    # parametrise grid
-    if "grid" in metafunc.fixturenames:
-        selected_grid_type = metafunc.config.getoption("--grid")
-
-        try:
-            if selected_grid_type == "simple_grid":
-                from icon4py.model.common.grid.grid_manager import (  # type: ignore [import-not-found]
-                    GridManager,
-                    IndexTransformation,
-                    ToGt4PyTransformation
-                )
-
-                from icon4py.model.common.grid.vertical import VerticalGridSize  # type: ignore [import-not-found]
-                SIMPLE_GRID_FILE = "/Users/ioannmag/cscs_repos/cycle20/icon-structured/tests/data/torus_grid/torus_100000_100000_24576.nc"
-                def init_grid_manager(fname, num_levels=65, transformation=ToGt4PyTransformation()):
-                    grid_manager = GridManager(transformation, fname, VerticalGridSize(num_levels))
-                    grid_manager()
-                    return grid_manager
-
-                def get_simple_grid():
-                    grid_manager = init_grid_manager(SIMPLE_GRID_FILE)
-                    grid_manager()
-                    simple_grid = grid_manager.get_grid()
-                    return simple_grid
-                grid_instance = get_simple_grid()
-                # from icon4py.model.common.grid.simple import SimpleGrid
-
-                # grid_instance = SimpleGrid()
-            elif selected_grid_type == "icon_grid":
-                from icon4py.model.testing.grid_utils import (
-                    get_grid_manager_for_experiment,
-                )
-
-                grid_instance = get_grid_manager_for_experiment(
-                    REGIONAL_EXPERIMENT, backend=selected_backend
-                ).grid
-            elif selected_grid_type == "icon_grid_global":
-                from icon4py.model.testing.grid_utils import (
-                    get_grid_manager_for_experiment,
-                )
-
-                grid_instance = get_grid_manager_for_experiment(
-                    GLOBAL_EXPERIMENT, backend=selected_backend
-                ).grid
-            else:
-                raise ValueError(f"Unknown grid type: {selected_grid_type}")
-            metafunc.parametrize("grid", [grid_instance], ids=[f"grid={selected_grid_type}"])
-        except ValueError as err:
-            available_grids = [
-                "simple_grid",
-                "icon_grid",
-                "icon_grid_global",
-            ]
-            raise Exception(f"{err}. Select from: {available_grids}") from err
+    backend = model_backends.BACKENDS[item.config.getoption("--backend")]
+    if "grid" in item.funcargs:
+        grid = item.funcargs["grid"]
+    else:
+        # use the default grid
+        grid = simple_grid.SimpleGrid()
+    apply_markers(
+        item.own_markers,
+        grid,
+        backend,
+        is_datatest=item.config.getoption("--datatest"),
+    )
