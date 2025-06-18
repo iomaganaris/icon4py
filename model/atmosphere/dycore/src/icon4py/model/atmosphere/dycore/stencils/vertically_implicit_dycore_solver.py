@@ -59,18 +59,10 @@ rayleigh_damping_options: Final = model_options.RayleighType()
 @gtx.field_operator
 def _set_surface_boundary_condtion_for_computation_of_w(
     contravariant_correction_at_cells_on_half_levels: fa.CellKField[ta.vpfloat],
-) -> tuple[fa.CellKField[ta.vpfloat], fa.CellKField[ta.wpfloat], fa.CellKField[ta.wpfloat]]:
-    tridiagonal_alpha_coeff_at_cells_on_half_levels = broadcast(
-        vpfloat("0.0"), (dims.CellDim, dims.KDim)
-    )
-    vertical_mass_flux_at_cells_on_half_levels = broadcast(
-        wpfloat("0.0"), (dims.CellDim, dims.KDim)
-    )
+) -> tuple[fa.CellKField[ta.wpfloat]]:
 
     return (
-        tridiagonal_alpha_coeff_at_cells_on_half_levels,
         astype(contravariant_correction_at_cells_on_half_levels, wpfloat),
-        vertical_mass_flux_at_cells_on_half_levels,
     )
 
 
@@ -250,6 +242,11 @@ def _vertically_implicit_solver_at_predictor_step_before_solving_w(
         theta_v_at_cells_on_half_levels=theta_v_at_cells_on_half_levels,
         rho_at_cells_on_half_levels=rho_at_cells_on_half_levels,
         dtime=dtime,
+    )
+    tridiagonal_alpha_coeff_at_cells_on_half_levels = concat_where(
+        dims.KDim == n_lev,
+        broadcast(vpfloat("0.0"), (dims.CellDim,)),
+        tridiagonal_alpha_coeff_at_cells_on_half_levels,
     )
 
     (rho_explicit_term, exner_explicit_term) = _compute_explicit_part_for_rho_and_exner(
@@ -517,6 +514,11 @@ def _vertically_implicit_solver_at_corrector_step_before_solving_w(
         rho_at_cells_on_half_levels=rho_at_cells_on_half_levels,
         dtime=dtime,
     )
+    tridiagonal_alpha_coeff_at_cells_on_half_levels = concat_where(
+        dims.KDim == n_lev,
+        broadcast(vpfloat("0.0"), (dims.CellDim,)),
+        tridiagonal_alpha_coeff_at_cells_on_half_levels,
+    )
 
     (rho_explicit_term, exner_explicit_term) = _compute_explicit_part_for_rho_and_exner(
         rho_nnow=current_rho,
@@ -777,9 +779,7 @@ def vertically_implicit_solver_at_predictor_step(
     _set_surface_boundary_condtion_for_computation_of_w(
         contravariant_correction_at_cells_on_half_levels=contravariant_correction_at_cells_on_half_levels,
         out=(
-            tridiagonal_alpha_coeff_at_cells_on_half_levels,
             next_w,
-            vertical_mass_flux_at_cells_on_half_levels,
         ),
         domain={
             dims.CellDim: (horizontal_start, horizontal_end),
@@ -927,9 +927,7 @@ def vertically_implicit_solver_at_corrector_step(
     _set_surface_boundary_condtion_for_computation_of_w(
         contravariant_correction_at_cells_on_half_levels=contravariant_correction_at_cells_on_half_levels,
         out=(
-            tridiagonal_alpha_coeff_at_cells_on_half_levels,
             next_w,
-            vertical_mass_flux_at_cells_on_half_levels,
         ),
         domain={
             dims.CellDim: (horizontal_start, horizontal_end),
