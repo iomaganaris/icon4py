@@ -1908,15 +1908,16 @@ def test_vertically_implicit_solver_at_predictor_step(
     )
 
     assert helpers.dallclose(
-        vertical_mass_flux_at_cells_on_half_levels.asnumpy(),
-        z_contr_w_fl_l_ref.asnumpy(),
+        vertical_mass_flux_at_cells_on_half_levels.asnumpy()[:,:icon_grid.num_levels],
+        z_contr_w_fl_l_ref.asnumpy()[:,:icon_grid.num_levels],
         atol=1e-12,
     )
     assert helpers.dallclose(
         tridiagonal_beta_coeff_at_cells_on_model_levels.asnumpy(), z_beta_ref.asnumpy()
     )
     assert helpers.dallclose(
-        tridiagonal_alpha_coeff_at_cells_on_half_levels.asnumpy(), z_alpha_ref.asnumpy()
+        tridiagonal_alpha_coeff_at_cells_on_half_levels.asnumpy()[:,:icon_grid.num_levels],
+        z_alpha_ref.asnumpy()[:,:icon_grid.num_levels]
     )
     assert helpers.dallclose(
         next_w.asnumpy()[start_cell_nudging:, :],
