@@ -36,16 +36,11 @@ def _compute1() -> tuple[
 @gtx.field_operator
 def _compute2(
     tmp: fa.CellKField[ta.vpfloat],
-    input: fa.CellKField[ta.wpfloat],
 ) -> tuple[
     fa.CellKField[ta.vpfloat],
     fa.CellKField[ta.wpfloat],
 ]:
-    tmp2 = concat_where(
-        dims.KDim == 80,
-        input,
-        broadcast(wpfloat("1.0"), (dims.CellDim, dims.KDim))
-    )
+    tmp2 = broadcast(wpfloat("1.0"), (dims.CellDim, dims.KDim))
     out = tmp2(Koff[1]) + tmp
 
     return (
@@ -88,7 +83,6 @@ def vertically_implicit_solver_at_corrector_step(
     )
     _compute2(
         tmp=b,
-        input=c,
         out=(
             c,
             out,
