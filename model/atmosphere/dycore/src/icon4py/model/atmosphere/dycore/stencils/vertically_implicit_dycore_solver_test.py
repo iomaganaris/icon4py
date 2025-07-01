@@ -36,11 +36,16 @@ def _compute1() -> tuple[
 @gtx.field_operator
 def _compute2(
     tmp: fa.CellKField[ta.vpfloat],
+    input: fa.CellKField[ta.wpfloat],
 ) -> tuple[
     fa.CellKField[ta.vpfloat],
     fa.CellKField[ta.wpfloat],
 ]:
-    tmp2 = broadcast(wpfloat("1.0"), (dims.CellDim, dims.KDim))
+    tmp2 = concat_where(
+        dims.KDim == 80,
+        input,
+        broadcast(wpfloat("1.0"), (dims.CellDim, dims.KDim))
+    )
     out = tmp2(Koff[1]) + tmp
 
     return (
@@ -77,19 +82,20 @@ def vertically_implicit_solver_at_corrector_step(
             c,
         ),
         domain={
-            dims.CellDim: (start_cell_index_nudging, end_cell_index_local),
-            dims.KDim: (vertical_end_index_model_surface - 1, vertical_end_index_model_surface),
+            dims.CellDim: (20, 500),
+            dims.KDim: (80, 81),
         },
     )
     _compute2(
         tmp=b,
+        input=c,
         out=(
             c,
             out,
         ),
         domain={
-            dims.CellDim: (start_cell_index_nudging, end_cell_index_local),
-            dims.KDim: (vertical_start_index_model_top, vertical_end_index_model_surface - 1),
+            dims.CellDim: (20, 500),
+            dims.KDim: (0, 80),
         },
     )
 
@@ -100,7 +106,7 @@ def vertically_implicit_solver_at_corrector_step(
             out,
         ),
         domain={
-            dims.CellDim: (start_cell_index_nudging, end_cell_index_local),
-            dims.KDim: (vertical_start_index_model_top, vertical_end_index_model_surface - 1),
+            dims.CellDim: (20, 500),
+            dims.KDim: (0, 80),
         },
     )
