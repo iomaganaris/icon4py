@@ -66,10 +66,12 @@ class GridManager:
         grid_file: pathlib.Path | str,
         config: v_grid.VerticalGridConfig,  # TODO(msimberg): remove to separate vertical and horizontal grid
         offset_transformation: gridfile.IndexTransformation = _fortran_to_python_transformer,
+        apply_torus_permutation: bool = False,
     ):
         self._offset_transformation = offset_transformation
         self._file_name = str(grid_file)
         self._vertical_config = config
+        self._apply_torus_permutation = apply_torus_permutation
         # Output
         self._grid: icon.IconGrid | None = None
         self._decomposition_info: decomposition.DecompositionInfo | None = None
@@ -447,7 +449,12 @@ class GridManager:
         neighbor_tables = self._get_local_connectivities(global_neighbor_tables)
 
         # COMPUTE remaining derived connectivities
-        neighbor_tables.update(_get_derived_connectivities(neighbor_tables))
+        neighbor_tables.update(
+            _get_derived_connectivities(
+                neighbor_tables,
+                apply_torus_permutation=self._apply_torus_permutation,
+            )
+        )
 
         refinement_fields = self._read_grid_refinement_fields(allocator)
 
@@ -547,6 +554,7 @@ class GridManager:
 
 def _get_derived_connectivities(
     neighbor_tables: dict[gtx.FieldOffset, data_alloc.NDArray],
+    apply_torus_permutation: bool = False,
 ) -> dict[gtx.FieldOffset, data_alloc.NDArray]:
     array_ns = data_alloc.array_namespace(next(iter(neighbor_tables.values())))
     e2v_table = neighbor_tables[dims.E2V]
@@ -558,6 +566,7 @@ def _get_derived_connectivities(
         e2v_table,
         c2v_table,
         e2c_table,
+        apply_torus_permutation,
     )
     e2c2e = _construct_diamond_edges(e2c_table, c2e_table)
     e2c2e0 = array_ns.column_stack((array_ns.asarray(range(e2c2e.shape[0])), e2c2e))
@@ -585,6 +594,7 @@ def _construct_diamond_vertices(
     e2v: data_alloc.NDArray,
     c2v: data_alloc.NDArray,
     e2c: data_alloc.NDArray,
+    apply_torus_permutation: bool,
 ) -> data_alloc.NDArray:
     r"""
     Construct the connectivity table for the vertices of a diamond in the ICON triangular grid.
@@ -614,6 +624,25 @@ def _construct_diamond_vertices(
     Returns: ndarray containing the connectivity table for edge-to-vertex on the diamond
     """
     array_ns = data_alloc.array_namespace(e2v)
+    if apply_torus_permutation:
+        # Permute every third edge block based on first vertex id to match torus ordering.
+        permutation = []
+        for i in range(2, len(e2v), 3):
+            permutation.append((int(e2v[i][0]), i))
+        permutation.sort(key=lambda x: x[0])
+        permutation_indexes = []
+        j = 0
+        for i in range(len(e2v)):
+            if i % 3 != 2:
+                permutation_indexes.append(i)
+            else:
+                permutation_indexes.append(permutation[j][1])
+                j += 1
+
+        permutation_array = array_ns.asarray(permutation_indexes, dtype=gtx.int32)
+        e2v = e2v[permutation_array]
+        e2c = e2c[permutation_array]
+
     e2c_c2v = _patch_with_dummy_lastline(c2v)[e2c, :]
     # `flat` includes duplicated e2v vertices (v1, v3), shape (n_edges, 6).
     flat = e2c_c2v.reshape(e2c_c2v.shape[0], -1)
@@ -627,6 +656,15 @@ def _construct_diamond_vertices(
     )  # (n_edges, 6)
     far_indices_pos = array_ns.sort(far_indices_pos, axis=1)[:, :2]
     e2v_far = array_ns.take_along_axis(flat, far_indices_pos, axis=1)
+
+    if apply_torus_permutation:
+        e2c2v = array_ns.hstack((e2v, e2v_far))
+        inverse_permutation = array_ns.empty_like(permutation_array)
+        inverse_permutation[permutation_array] = array_ns.arange(
+            permutation_array.shape[0], dtype=permutation_array.dtype
+        )
+        return e2c2v[inverse_permutation]
+
     return array_ns.hstack((e2v, e2v_far))
 
 
