@@ -659,11 +659,9 @@ def _construct_diamond_vertices(
 
     if apply_torus_permutation:
         e2c2v = array_ns.hstack((e2v, e2v_far))
-        inverse_permutation = array_ns.empty_like(permutation_array)
-        inverse_permutation[permutation_array] = array_ns.arange(
-            permutation_array.shape[0], dtype=permutation_array.dtype
-        )
-        return e2c2v[inverse_permutation]
+        sort_idx = array_ns.argsort(e2c2v[:, 0])
+        return e2c2v[sort_idx]
+
 
     return array_ns.hstack((e2v, e2v_far))
 
