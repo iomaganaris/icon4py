@@ -420,7 +420,8 @@ icon4py-atmosphere-dycore = {workspace = true}
 icon4py-atmosphere-microphysics = {workspace = true}
 icon4py-atmosphere-muphys = {workspace = true}
 icon4py-atmosphere-physics-driver = {workspace = true}
-# gt4py = {git = "https://github.com/GridTools/gt4py", branch = "main"}
+gt4py = {git = "https://github.com/GridTools/gt4py", branch = "threadblock_heuristics"}
+dace = {git = "https://github.com/GridTools/dace", branch = "dace_toolchain_deterministic"}
 # gt4py = {index = "test.pypi"}
 # dace = {index = "gridtools"}
 icon4py-atmosphere-tracer_advection = {workspace = true}
